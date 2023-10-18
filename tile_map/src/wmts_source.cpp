@@ -62,7 +62,7 @@ namespace tile_map
   QString WmtsSource::GenerateTileUrl(int32_t level, int64_t x, int64_t y)
   {
     QString url(base_url_);
-    url.replace(QString::fromStdString("{level}"), QString::number(level));
+    url.replace(QString::fromStdString("{z}"), QString::number(level));
     url.replace(QString::fromStdString("{x}"), QString::number(x));
     url.replace(QString::fromStdString("{y}"), QString::number(y));
 

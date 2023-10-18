@@ -2,29 +2,14 @@
 Changelog for package tile_map
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1.4.2 (2022-12-13)
-------------------
-* Merge pull request `#721 <https://github.com/swri-robotics/mapviz/issues/721>`_ from rjb0026/720-allow-building-with-c++14-for-version-greater-than-kinetic
-  720 allow building with c++14 for version greater than kinetic
-* Conditionally setting c++ standard per target.
-* Added conditional for building with C++11 in kinetic for multires_image and tile_map packages
-* [tile_map] Output human-readable error message (`#703 <https://github.com/swri-robotics/mapviz/issues/703>`_)
-  * [tile_map] Output human-readable error message
-* Contributors: Dominik Kleiser, Matthew, rjb0026
-
-1.4.1 (2020-10-22)
+2.1.0 (2020-10-22)
 ------------------
 
-1.4.0 (2020-07-28)
+2.0.0 (2020-05-13)
 ------------------
-* Support ROS Noetic (`#696 <https://github.com/swri-robotics/mapviz/issues/696>`_)
-* Contributors: P. J. Reed
-
-1.3.0 (2020-05-13)
-------------------
-* Fix linking to OpenGL GLU library (`#675 <https://github.com/swri-robotics/mapviz/issues/675>`_)
+* Port mapviz to ROS 2 (`#672 <https://github.com/swri-robotics/mapviz/issues/672>`_)
 * Remove OpenGL warning (`#667 <https://github.com/swri-robotics/mapviz/issues/667>`_)
-* Contributors: Ben Wolsieffer, Daniel D'Souza
+* Contributors: Daniel D'Souza, P. J. Reed, Jacob Hassold, Kevin Nickels, Roger Strain, Matthew Bries
 
 1.2.0 (2019-09-04)
 ------------------

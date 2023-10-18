@@ -1,0 +1,56 @@
+<package format="3">
+  <name>swri_transform_util</name>
+  <version>3.4.0</version>
+  <description>
+
+     The swri_transform_util package contains utility functions and classes for
+     transforming between coordinate frames.
+
+  </description>
+  <author>Marc Alban</author>
+  <maintainer email="preed@swri.org">P. J. Reed</maintainer>
+  <license>BSD</license>
+  <url>https://github.com/swri-robotics/marti_common</url>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+  <buildtool_depend>pkg-config</buildtool_depend>
+
+  <depend>boost</depend>
+  <depend>cv_bridge</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>geographic_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>gps_msgs</depend>
+  <depend>libgeos++-dev</depend>
+  <depend>marti_nav_msgs</depend>
+  <depend>proj</depend>
+  <depend>rclcpp_components</depend>
+  <depend>rclcpp</depend>
+  <depend>rcl_interfaces</depend>
+  <depend>rclpy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>swri_math_util</depend>
+  <depend>swri_roscpp</depend>
+  <depend>tf2</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>yaml-cpp</depend>
+
+  <!-- XML-based launching and tf2_py are only supported in Eloquent -->
+  <exec_depend condition="$ROS_DISTRO != dashing">launch_xml</exec_depend>
+  <exec_depend condition="$ROS_DISTRO != dashing">tf2_py</exec_depend>
+
+  <exec_depend>python3-numpy</exec_depend>
+
+  <!--
+  After the unit tests are converted...
+  <test_depend>ament_cmake_gtest</test_depend>
+  -->
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <rosdoc config="rosdoc.yaml" />
+  </export>
+</package>
+

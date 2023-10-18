@@ -101,22 +101,37 @@
      </property>
      <item>
       <property name="text">
-       <string>Stamen (terrain)</string>
+       <string>GoogleMapHybrid</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>Stamen (watercolor)</string>
+       <string>GoogleMapStreet</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>Stamen (toner)</string>
+       <string>GoogleMapSatellite</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>Bing Maps (terrain)</string>
+       <string>GoogleMapTerrian</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>OSMStreetMap</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>OpenSeaMap</string>
+      </property>
+     </item>
+      <item>
+      <property name="text">
+       <string>BingMap</string>
       </property>
      </item>
      <item>

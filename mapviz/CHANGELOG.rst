@@ -2,30 +2,18 @@
 Changelog for package mapviz
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1.4.2 (2022-12-13)
+2.1.0 (2020-10-22)
 ------------------
-* Merge pull request `#721 <https://github.com/swri-robotics/mapviz/issues/721>`_ from rjb0026/720-allow-building-with-c++14-for-version-greater-than-kinetic
-  720 allow building with c++14 for version greater than kinetic
-* Conditionally setting c++ standard per target.
-* Removed explicit setting of compile flags for c++ standard version and replaced with conditional for building with C++11 in kinetic for mapviz and mapviz_plugins.
-* Contributors: Matthew, rjb0026
+* ROS Foxy support (`#695 <https://github.com/swri-robotics/mapviz/issues/695>`_)
+* Contributors: P. J. Reed
 
-1.4.1 (2020-10-22)
+2.0.0 (2020-05-13)
 ------------------
-
-1.4.0 (2020-07-28)
-------------------
-* Support ROS Noetic (`#696 <https://github.com/swri-robotics/mapviz/issues/696>`_)
-* Separate Save and Save As and open file dialogs in better locations. (`#700 <https://github.com/swri-robotics/mapviz/issues/700>`_)
-* Contributors: Matthew, P. J. Reed
-
-1.3.0 (2020-05-13)
-------------------
-* Implement (`#671 <https://github.com/swri-robotics/mapviz/issues/671>`_)
+* Port mapviz to ROS 2 (`#672 <https://github.com/swri-robotics/mapviz/issues/672>`_)
 * Remove OpenGL warning (`#667 <https://github.com/swri-robotics/mapviz/issues/667>`_)
 * Resolves segfault issue on ClearHistory() function call (`#651 <https://github.com/swri-robotics/mapviz/issues/651>`_)
 * Fix plug-in config panel to scroll per-pixel instead of per-item, allowing configuration of plug-ins that have config settings that are too large to fit in the panel all at once. (`#646 <https://github.com/swri-robotics/mapviz/issues/646>`_)
-* Contributors: Daniel D'Souza, Marc Alban, Matthew, jreyes512
+* Contributors: Daniel D'Souza, Marc Alban, Matthew Bries, Matthew Grogan, P. J. Reed, Jason Gassaway, John Reyes, Jacob Hassold, Kevin Nickels, Roger Strain
 
 1.2.0 (2019-09-04)
 ------------------

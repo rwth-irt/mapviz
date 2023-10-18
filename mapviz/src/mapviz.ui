@@ -40,8 +40,7 @@
     </property>
     <addaction name="actionOpen_config"/>
     <addaction name="separator"/>
-    <addaction name="actionSave_Config"/>
-    <addaction name="actionSaveAs_config"/>
+    <addaction name="actionSave_config"/>
     <addaction name="actionClear"/>
     <addaction name="separator"/>
     <addaction name="actionSet_Capture_Directory"/>
@@ -254,6 +253,24 @@
           </property>
          </widget>
         </item>
+        <item row="3" column="0" colspan="3">
+         <widget class="QCheckBox" name="uselatesttransforms">
+          <property name="toolTip">
+           <string>Use the current time when transforming data instead of using the
+                                                timestamps associated with the data
+                                            </string>
+          </property>
+          <property name="layoutDirection">
+           <enum>Qt::LeftToRight</enum>
+          </property>
+          <property name="text">
+           <string>Use Latest Transforms</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
        </layout>
       </widget>
      </item>
@@ -333,9 +350,9 @@
     <string>Open Config</string>
    </property>
   </action>
-  <action name="actionSaveAs_config">
+  <action name="actionSave_config">
    <property name="text">
-    <string>Save Config As...</string>
+    <string>Save Config</string>
    </property>
   </action>
   <action name="actionConfig_Dock">
@@ -475,11 +492,6 @@
     <string>Clear Config</string>
    </property>
   </action>
-  <action name="actionSave_Config">
-   <property name="text">
-    <string>Save Config</string>
-   </property>
-  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -496,6 +508,7 @@
  <tabstops>
   <tabstop>fixedframe</tabstop>
   <tabstop>targetframe</tabstop>
+  <tabstop>uselatesttransforms</tabstop>
   <tabstop>bg_color</tabstop>
   <tabstop>configs</tabstop>
   <tabstop>addbutton</tabstop>
@@ -618,10 +631,10 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionSaveAs_config</sender>
+   <sender>actionSave_config</sender>
    <signal>triggered()</signal>
    <receiver>mapviz</receiver>
-   <slot>SaveConfigAs()</slot>
+   <slot>SaveConfig()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
@@ -678,6 +691,22 @@
     <hint type="destinationlabel">
      <x>399</x>
      <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>uselatesttransforms</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>mapviz</receiver>
+   <slot>ToggleUseLatestTransforms(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>58</x>
+     <y>130</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>460</x>
+     <y>242</y>
     </hint>
    </hints>
   </connection>
@@ -761,22 +790,6 @@
     </hint>
    </hints>
   </connection>
-  <connection>
-   <sender>actionSave_Config</sender>
-   <signal>triggered()</signal>
-   <receiver>mapviz</receiver>
-   <slot>SaveConfig()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>299</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
  </connections>
  <slots>
   <slot>SelectNewDisplay()</slot>
@@ -789,10 +802,10 @@
   <slot>MoveDisplay(QModelIndexList)</slot>
   <slot>OpenConfig()</slot>
   <slot>SaveConfig()</slot>
-  <slot>SaveConfigAs()</slot>
   <slot>Force720p(bool)</slot>
   <slot>Force480p(bool)</slot>
   <slot>SetResizable(bool)</slot>
+  <slot>ToggleUseLatestTransforms(bool)</slot>
   <slot>SetCaptureDirectory()</slot>
   <slot>ToggleStatusBar(bool)</slot>
   <slot>ToggleCaptureTools(bool)</slot>

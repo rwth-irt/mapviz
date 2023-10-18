@@ -30,10 +30,6 @@
 
 #include <mapviz_plugins/pose_plugin.h>
 
-// C++ standard libraries
-#include <cstdio>
-#include <vector>
-
 // QT libraries
 #include <QDialog>
 #include <QGLWidget>
@@ -42,19 +38,29 @@
 #include <opencv2/core/core.hpp>
 
 // ROS libraries
-#include <ros/master.h>
+#include <rclcpp/rclcpp.hpp>
 
-#include <swri_image_util/geometry_util.h>
 #include <swri_transform_util/transform_util.h>
 #include <mapviz/select_topic_dialog.h>
 
 // Declare plugin
-#include <pluginlib/class_list_macros.h>
+#include <pluginlib/class_list_macros.hpp>
+
+// C++ standard libraries
+#include <cstdio>
+#include <string>
+#include <utility>
+#include <vector>
+
 PLUGINLIB_EXPORT_CLASS(mapviz_plugins::PosePlugin, mapviz::MapvizPlugin)
 
 namespace mapviz_plugins
 {
-  PosePlugin::PosePlugin() : config_widget_(new QWidget())
+  PosePlugin::PosePlugin()
+  : PointDrawingPlugin()
+  , ui_()
+  , config_widget_(new QWidget())
+  , has_message_(false)
   {
     ui_.setupUi(config_widget_);
 
@@ -82,8 +88,6 @@ namespace mapviz_plugins
                      SLOT(SetDrawStyle(QString)));
     QObject::connect(ui_.static_arrow_sizes, SIGNAL(clicked(bool)),
                      this, SLOT(SetStaticArrowSizes(bool)));
-    QObject::connect(ui_.use_latest_transforms, SIGNAL(clicked(bool)),
-                     this, SLOT(SetUseLatestTransforms(bool)));
     QObject::connect(ui_.arrow_size, SIGNAL(valueChanged(int)),
                      this, SLOT(SetArrowSize(int)));
     QObject::connect(ui_.color, SIGNAL(colorEdited(const QColor&)), this,
@@ -94,18 +98,14 @@ namespace mapviz_plugins
                      SLOT(ClearPoints()));
   }
 
-  PosePlugin::~PosePlugin()
-  {
-  }
-
   void PosePlugin::SelectTopic()
   {
-    ros::master::TopicInfo topic =
-        mapviz::SelectTopicDialog::selectTopic("geometry_msgs/PoseStamped");
+    std::string topic =
+        mapviz::SelectTopicDialog::selectTopic(node_, "geometry_msgs/msg/PoseStamped");
 
-    if (!topic.name.empty())
+    if (!topic.empty())
     {
-      ui_.topic->setText(QString::fromStdString(topic.name));
+      ui_.topic->setText(QString::fromStdString(topic));
       TopicEdited();
     }
   }
@@ -120,20 +120,24 @@ namespace mapviz_plugins
       has_message_ = false;
       PrintWarning("No messages received.");
 
-      pose_sub_.shutdown();
+      // pose_sub_.shutdown();
+      pose_sub_.reset();
 
       topic_ = topic;
       if (!topic.empty())
       {
-        pose_sub_ = node_.subscribe(topic_, 10, &PosePlugin::PoseCallback, this);
+        pose_sub_ = node_->create_subscription<geometry_msgs::msg::PoseStamped>(
+          topic_,
+          rclcpp::QoS(1),
+          std::bind(&PosePlugin::PoseCallback, this, std::placeholders::_1));
 
-        ROS_INFO("Subscribing to %s", topic_.c_str());
+        RCLCPP_INFO(node_->get_logger(), "Subscribing to %s", topic_.c_str());
       }
     }
   }
 
-  void PosePlugin::PoseCallback(const geometry_msgs::PoseStampedConstPtr& pose)
-  {  
+  void PosePlugin::PoseCallback(const geometry_msgs::msg::PoseStamped::SharedPtr pose)
+  {
     if (!has_message_)
     {
       initialized_ = true;
@@ -144,22 +148,17 @@ namespace mapviz_plugins
     stamped_point.stamp = pose->header.stamp;
     stamped_point.source_frame = pose->header.frame_id;
 
-    if (!points().empty() && points().back().source_frame != stamped_point.source_frame)
-    {
-      single_frame_ = false;
-    }
+    stamped_point.point = tf2::Vector3(pose->pose.position.x,
+                                        pose->pose.position.y,
+                                        pose->pose.position.z);
 
-    stamped_point.point = tf::Point(pose->pose.position.x,
-                                    pose->pose.position.y,
-                                    pose->pose.position.z);
-
-    stamped_point.orientation = tf::Quaternion(
+    stamped_point.orientation = tf2::Quaternion(
         pose->pose.orientation.x,
         pose->pose.orientation.y,
         pose->pose.orientation.z,
         pose->pose.orientation.w);
 
-    pushPoint( std::move( stamped_point) );
+    pushPoint( std::move(stamped_point) );
   }
 
   void PosePlugin::PrintError(const std::string& message)
@@ -204,15 +203,13 @@ namespace mapviz_plugins
   {
     if (node["topic"])
     {
-      std::string topic;
-      node["topic"] >> topic;
+      std::string topic = node["topic"].as<std::string>();
       ui_.topic->setText(topic.c_str());
     }
 
     if (node["color"])
     {
-      std::string color;
-      node["color"] >> color;
+      std::string color = node["color"].as<std::string>();
       QColor qcolor(color.c_str());
       SetColor(qcolor);
       ui_.color->setColor(qcolor);
@@ -220,21 +217,16 @@ namespace mapviz_plugins
 
     if (node["draw_style"])
     {
-      std::string draw_style;
-      node["draw_style"] >> draw_style;
+      std::string draw_style = node["draw_style"].as<std::string>();
 
       if (draw_style == "lines")
       {
         ui_.drawstyle->setCurrentIndex(0);
         SetDrawStyle( LINES );
-      }
-      else if (draw_style == "points")
-      {
+      } else if (draw_style == "points") {
         ui_.drawstyle->setCurrentIndex(1);
         SetDrawStyle( POINTS );
-      }
-      else if (draw_style == "arrows")
-      {
+      } else if (draw_style == "arrows") {
         ui_.drawstyle->setCurrentIndex(2);
         SetDrawStyle( ARROWS );
       }
@@ -242,24 +234,21 @@ namespace mapviz_plugins
 
     if (node["position_tolerance"])
     {
-      double position_tolerance;
-      node["position_tolerance"] >> position_tolerance;
+      double position_tolerance = node["position_tolerance"].as<double>();
       ui_.positiontolerance->setValue(position_tolerance);
       PositionToleranceChanged(position_tolerance);
     }
 
     if (node["buffer_size"])
     {
-      double buffer_size;
-      node["buffer_size"] >> buffer_size;
+      int buffer_size = node["buffer_size"].as<int>();
       ui_.buffersize->setValue(buffer_size);
       BufferSizeChanged(buffer_size);
     }
 
     if (node["show_laps"])
     {
-      bool show_laps = false;
-      node["show_laps"] >> show_laps;
+      bool show_laps = node["show_laps"].as<bool>();
       ui_.show_laps->setChecked(show_laps);
       LapToggled(show_laps);
     }
@@ -276,13 +265,6 @@ namespace mapviz_plugins
       int arrow_size = node["arrow_size"].as<int>();
       ui_.arrow_size->setValue(arrow_size);
       SetArrowSize(arrow_size);
-    }
-
-    if (node["use_latest_transforms"])
-    {
-      bool use_latest_transforms = node["use_latest_transforms"].as<bool>();
-      ui_.use_latest_transforms->setChecked(use_latest_transforms);
-      SetUseLatestTransforms(use_latest_transforms);
     }
 
     TopicEdited();
@@ -307,10 +289,11 @@ namespace mapviz_plugins
     bool show_laps = ui_.show_laps->isChecked();
     emitter << YAML::Key << "show_laps" << YAML::Value << show_laps;
 
-    emitter << YAML::Key << "static_arrow_sizes" << YAML::Value << ui_.static_arrow_sizes->isChecked();
+    emitter << YAML::Key
+      << "static_arrow_sizes"
+      << YAML::Value
+      << ui_.static_arrow_sizes->isChecked();
 
     emitter << YAML::Key << "arrow_size" << YAML::Value << ui_.arrow_size->value();
-
-    emitter << YAML::Key << "use_latest_transforms" << YAML::Value << ui_.use_latest_transforms->isChecked();
   }
-}
+}   // namespace mapviz_plugins

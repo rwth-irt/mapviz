@@ -19,10 +19,6 @@
 
 #include <mapviz_plugins/navsat_plugin.h>
 
-// C++ standard libraries
-#include <cstdio>
-#include <vector>
-
 // QT libraries
 #include <QDialog>
 #include <QGLWidget>
@@ -31,20 +27,29 @@
 #include <opencv2/core/core.hpp>
 
 // ROS libraries
-#include <ros/master.h>
-
-#include <swri_image_util/geometry_util.h>
 #include <swri_transform_util/transform_util.h>
 
 #include <mapviz/select_topic_dialog.h>
 
 // Declare plugin
-#include <pluginlib/class_list_macros.h>
+#include <pluginlib/class_list_macros.hpp>
+
+// C++ standard libraries
+#include <cstdio>
+#include <string>
+#include <utility>
+#include <vector>
+#include <iostream>
+
 PLUGINLIB_EXPORT_CLASS(mapviz_plugins::NavSatPlugin, mapviz::MapvizPlugin)
 
 namespace mapviz_plugins
 {
-  NavSatPlugin::NavSatPlugin() : config_widget_(new QWidget())
+  NavSatPlugin::NavSatPlugin()
+  : PointDrawingPlugin()
+  , ui_()
+  , config_widget_(new QWidget())
+  , has_message_(false)
   {
     ui_.setupUi(config_widget_);
 
@@ -64,8 +69,6 @@ namespace mapviz_plugins
                      SLOT(SelectTopic()));
     QObject::connect(ui_.topic, SIGNAL(editingFinished()), this,
                      SLOT(TopicEdited()));
-    QObject::connect(ui_.use_latest_transforms, SIGNAL(clicked(bool)),
-                     this, SLOT(SetUseLatestTransforms(bool)));
     QObject::connect(ui_.positiontolerance, SIGNAL(valueChanged(double)), this,
                      SLOT(PositionToleranceChanged(double)));
     QObject::connect(ui_.buffersize, SIGNAL(valueChanged(int)), this,
@@ -78,18 +81,14 @@ namespace mapviz_plugins
                      SLOT(ClearPoints()));
   }
 
-  NavSatPlugin::~NavSatPlugin()
-  {
-  }
-
   void NavSatPlugin::SelectTopic()
   {
-    ros::master::TopicInfo topic =
-        mapviz::SelectTopicDialog::selectTopic("sensor_msgs/NavSatFix");
+    std::string topic =
+        mapviz::SelectTopicDialog::selectTopic(node_, "sensor_msgs/msg/NavSatFix");
 
-    if (!topic.name.empty())
+    if (!topic.empty())
     {
-      ui_.topic->setText(QString::fromStdString(topic.name));
+      ui_.topic->setText(QString::fromStdString(topic));
       TopicEdited();
     }
   }
@@ -104,19 +103,22 @@ namespace mapviz_plugins
       has_message_ = false;
       PrintWarning("No messages received.");
 
-      navsat_sub_.shutdown();
+      navsat_sub_.reset();
       topic_ = topic;
       if (!topic.empty())
       {
-        navsat_sub_ = node_.subscribe(topic_, 10, &NavSatPlugin::NavSatFixCallback, this);
+        navsat_sub_ = node_->create_subscription<sensor_msgs::msg::NavSatFix>(
+            topic_,
+            rclcpp::SensorDataQoS(rclcpp::KeepLast(1)),
+            std::bind(&NavSatPlugin::NavSatFixCallback, this, std::placeholders::_1));
 
-        ROS_INFO("Subscribing to %s", topic_.c_str());
+        RCLCPP_INFO(node_->get_logger(), "Subscribing to %s", topic_.c_str());
       }
     }
   }
 
   void NavSatPlugin::NavSatFixCallback(
-      const sensor_msgs::NavSatFixConstPtr navsat)
+      const sensor_msgs::msg::NavSatFix::ConstSharedPtr navsat)
   {
     if (!tf_manager_->LocalXyUtil()->Initialized())
     {
@@ -128,6 +130,8 @@ namespace mapviz_plugins
       has_message_ = true;
     }
 
+   // std::cout << "on NavSat: " << topic_ << " time: " << std::fixed << rclcpp::Time(navsat->header.stamp).seconds() << std::endl;
+
     StampedPoint stamped_point;
     stamped_point.stamp = navsat->header.stamp;
 
@@ -135,11 +139,11 @@ namespace mapviz_plugins
     double y;
     tf_manager_->LocalXyUtil()->ToLocalXy(navsat->latitude, navsat->longitude, x, y);
 
-    stamped_point.point = tf::Point(x, y, navsat->altitude);
-    stamped_point.orientation = tf::createQuaternionFromYaw(0.0);
+    stamped_point.point = tf2::Vector3(x, y, navsat->altitude);
+    stamped_point.orientation.setRPY(0, 0, 0);
     stamped_point.source_frame = tf_manager_->LocalXyUtil()->Frame();
 
-    pushPoint( std::move(stamped_point ) );
+    pushPoint( std::move(stamped_point) );
   }
 
   void NavSatPlugin::PrintError(const std::string& message)
@@ -183,15 +187,13 @@ namespace mapviz_plugins
   {
     if (node["topic"])
     {
-      std::string topic;
-      node["topic"] >> topic;
+      std::string topic = node["topic"].as<std::string>();
       ui_.topic->setText(topic.c_str());
     }
 
     if (node["color"])
     {
-      std::string color;
-      node["color"] >> color;
+      std::string color = node["color"].as<std::string>();
       QColor qcolor(color.c_str());
       SetColor(qcolor);
       ui_.color->setColor(qcolor);
@@ -199,40 +201,28 @@ namespace mapviz_plugins
 
     if (node["draw_style"])
     {
-      std::string draw_style;
-      node["draw_style"] >> draw_style;
+      std::string draw_style = node["draw_style"].as<std::string>();
 
       if (draw_style == "lines")
       {
         ui_.drawstyle->setCurrentIndex(0);
         SetDrawStyle( LINES );
-      }
-      else if (draw_style == "points")
-      {
+      } else if (draw_style == "points") {
         ui_.drawstyle->setCurrentIndex(1);
         SetDrawStyle( POINTS );
       }
     }
 
-    if (node["use_latest_transforms"])
-    {
-      bool use_latest_transforms = node["use_latest_transforms"].as<bool>();
-      ui_.use_latest_transforms->setChecked(use_latest_transforms);
-      SetUseLatestTransforms(use_latest_transforms);
-    }
-
     if (node["position_tolerance"])
     {
-      double position_tolerance;
-      node["position_tolerance"] >> position_tolerance;
+      auto position_tolerance = node["position_tolerance"].as<double>();
       ui_.positiontolerance->setValue(position_tolerance);
       PositionToleranceChanged(position_tolerance);
     }
 
     if (node["buffer_size"])
     {
-      double buffer_size;
-      node["buffer_size"] >> buffer_size;
+      auto buffer_size = node["buffer_size"].as<int>();
       ui_.buffersize->setValue(buffer_size);
       BufferSizeChanged(buffer_size);
     }
@@ -251,11 +241,9 @@ namespace mapviz_plugins
     std::string draw_style = ui_.drawstyle->currentText().toStdString();
     emitter << YAML::Key << "draw_style" << YAML::Value << draw_style;
 
-    emitter << YAML::Key << "use_latest_transforms" << YAML::Value << ui_.use_latest_transforms->isChecked();
-
     emitter << YAML::Key << "position_tolerance" <<
                YAML::Value << positionTolerance();
 
     emitter << YAML::Key << "buffer_size" << YAML::Value << bufferSize();
   }
-}
+}   // namespace mapviz_plugins

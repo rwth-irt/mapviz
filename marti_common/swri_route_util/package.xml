@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>swri_route_util</name>
+  <version>3.4.0</version>
+
+  <description>
+    This library provides functionality to simplify working with the
+    navigation messages defined in marti_nav_msgs.
+  </description>
+
+  <maintainer email="preed@swri.org">P. J. Reed</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>boost</depend>
+  <depend>marti_common_msgs</depend>
+  <depend>marti_nav_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>swri_transform_util</depend>
+  <depend>swri_math_util</depend>
+  <depend>swri_geometry_util</depend>
+  <depend>swri_roscpp</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>visualization_msgs</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
