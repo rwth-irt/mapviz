@@ -2,19 +2,60 @@
 Changelog for package mapviz_plugins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.1.0 (2020-10-22)
+1.4.2 (2022-12-13)
+------------------
+* Merge pull request `#716 <https://github.com/swri-robotics/mapviz/issues/716>`_ from swri-robotics/pose_publisher
+  Pose publisher
+* Merge pull request `#752 <https://github.com/swri-robotics/mapviz/issues/752>`_ from matt-attack/add-stuff
+  Add bus features
+* Update dates
+* Add bus features
+* Merge pull request `#734 <https://github.com/swri-robotics/mapviz/issues/734>`_ from matt-attack/improve-textured-marker
+  Fix Issues With Textured Marker Plugin
+* Make sure textured marker can handle delayed transforms and use marker alpha values
+* Merge pull request `#715 <https://github.com/swri-robotics/mapviz/issues/715>`_ from swri-robotics/posearray
+  Add visualizer for PoseArray
+* Merge pull request `#718 <https://github.com/swri-robotics/mapviz/issues/718>`_ from agyoungs/fix-text-marker-disable
+  Allow text markers to be enabled/disabled via their namespace using the marker plugin checkboxes
+* Merge pull request `#721 <https://github.com/swri-robotics/mapviz/issues/721>`_ from rjb0026/720-allow-building-with-c++14-for-version-greater-than-kinetic
+  720 allow building with c++14 for version greater than kinetic
+* Conditionally setting c++ standard per target.
+* Removed explicit setting of compile flags for c++ standard version and replaced with conditional for building with C++11 in kinetic for mapviz and mapviz_plugins.
+* Allow text markers to be enabled/disabled via their namespace using the marker plugin checkboxes
+* Add visualizer for PoseArray
+* Contributors: Alex Youngs, David Anthony, Kevin Nickels, Matthew, Matthew Bries, rjb0026
+
+1.4.1 (2020-10-22)
 ------------------
 * Constrain the minimum line and point marker sizes to be 1 pixel wide. (`#704 <https://github.com/swri-robotics/mapviz/issues/704>`_)
-* ROS Foxy support (`#695 <https://github.com/swri-robotics/mapviz/issues/695>`_)
-* Update the displayed distance continuously while moving a point.
+* Fix compile warning in ROS Noetic (`#706 <https://github.com/swri-robotics/mapviz/issues/706>`_)
+* Contributors: Marc Alban, P. J. Reed
+
+1.4.0 (2020-07-28)
+------------------
+* Support ROS Noetic (`#696 <https://github.com/swri-robotics/mapviz/issues/696>`_)
+* Add Visualization for marti_nav_msgs::TrackedObjectArray and marti_nav_msgs::ObstacleArray (`#701 <https://github.com/swri-robotics/mapviz/issues/701>`_)
+* Merge pull request `#689 <https://github.com/swri-robotics/mapviz/issues/689>`_ from mdgrogan/update-distance-on-move-point
 * Use higher precision in the coordinate picker for wgs84 (`#692 <https://github.com/swri-robotics/mapviz/issues/692>`_)
 * Clear the namespace list after hitting the clear button. (`#691 <https://github.com/swri-robotics/mapviz/issues/691>`_)
-* Contributors: Matt Grogan, Matthew, P. J. Reed, Marc Alban
+* Update the displayed distance continuously while moving a point.
+* Contributors: Matt Grogan, Matthew, P. J. Reed
 
-2.0.0 (2020-05-13)
+1.3.0 (2020-05-13)
 ------------------
-* Port mapviz to ROS 2 (`#672 <https://github.com/swri-robotics/mapviz/issues/672>`_)
-* Contributors: Daniel D'Souza, Matthew Bries, Matthew Grogan, P. J. Reed, Jason Gassaway, John Reyes, Jacob Hassold, Kevin Nickels, Roger Strain
+* Fix plan route visibility (`#680 <https://github.com/swri-robotics/mapviz/issues/680>`_)
+* Disable coordinate picker and measuring plugin when hidden (`#678 <https://github.com/swri-robotics/mapviz/issues/678>`_)
+* Increase odom queue size so messages dont drop (`#676 <https://github.com/swri-robotics/mapviz/issues/676>`_)
+* Add float plugin (`#665 <https://github.com/swri-robotics/mapviz/issues/665>`_)
+* Make string plugin also support string stamped (`#666 <https://github.com/swri-robotics/mapviz/issues/666>`_)
+* Don't draw arrow for invalid orientation (`#673 <https://github.com/swri-robotics/mapviz/issues/673>`_)
+* Remove OpenGL warning (`#667 <https://github.com/swri-robotics/mapviz/issues/667>`_)
+* Change for loop to while loop in marker plugin so that iterators aren't getting double incremented on erases. (`#663 <https://github.com/swri-robotics/mapviz/issues/663>`_)
+* Add ability to show all covariances (`#659 <https://github.com/swri-robotics/mapviz/issues/659>`_)
+* Add ability to use relative paths for images in the robot image plugin (`#658 <https://github.com/swri-robotics/mapviz/issues/658>`_)
+* Resolves segfault issue on ClearHistory() function call (`#651 <https://github.com/swri-robotics/mapviz/issues/651>`_)
+* Default show background and measuring text to true (`#657 <https://github.com/swri-robotics/mapviz/issues/657>`_)
+* Contributors: Daniel D'Souza, Matthew, Matthew Grogan, jgassaway, jreyes512, knickels
 
 1.2.0 (2019-09-04)
 ------------------

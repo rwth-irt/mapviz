@@ -36,6 +36,7 @@
 
 // Boost libraries
 #include <boost/filesystem.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
 #include <mapviz/mapviz_plugin.h>
@@ -61,26 +62,24 @@ namespace tile_map
 
   public:
     TileMapPlugin();
-    ~TileMapPlugin() override = default;
+    virtual ~TileMapPlugin();
 
-    bool Initialize(QGLWidget* canvas) override;
-    void Shutdown() override {}
+    bool Initialize(QGLWidget* canvas);
+    void Shutdown() {}
 
-    void Draw(double x, double y, double scale) override;
+    void Draw(double x, double y, double scale);
 
-    void Transform() override;
+    void Transform();
 
-    void LoadConfig(const YAML::Node& node, const std::string& path) override;
-    void SaveConfig(YAML::Emitter& emitter, const std::string& path) override;
+    void LoadConfig(const YAML::Node& node, const std::string& path);
+    void SaveConfig(YAML::Emitter& emitter, const std::string& path);
 
-    QWidget* GetConfigWidget(QWidget* parent) override;
-
-    void SetNode(rclcpp::Node& node) override;
+    QWidget* GetConfigWidget(QWidget* parent);
 
   protected Q_SLOTS:
-    void PrintError(const std::string& message) override;
-    void PrintInfo(const std::string& message) override;
-    void PrintWarning(const std::string& message) override;
+    void PrintError(const std::string& message);
+    void PrintInfo(const std::string& message);
+    void PrintWarning(const std::string& message);
 
     void DeleteTileSource();
     void SelectSource(const QString& source_name);
@@ -88,7 +87,7 @@ namespace tile_map
     void ResetTileCache();
 
   private:
-    void selectTileSource(const std::shared_ptr<TileSource>& tile_source);
+    void selectTileSource(const boost::shared_ptr<TileSource>& tile_source);
     void startCustomEditing();
     void stopCustomEditing();
 
@@ -101,7 +100,7 @@ namespace tile_map
     bool transformed_;
     
     TileMapView tile_map_;
-    std::map<QString, std::shared_ptr<TileSource> > tile_sources_;
+    std::map<QString, boost::shared_ptr<TileSource> > tile_sources_;
 
     double last_center_x_;
     double last_center_y_;
@@ -117,6 +116,7 @@ namespace tile_map
     static std::string SOURCE_KEY;
     static std::string TYPE_KEY;
     static QString BING_NAME;
+    
     static QString GOOGLEHYBRID_NAME;
     static QString GOOGLESTREET_NAME;
     static QString GOOGLETERRAIN_NAME;

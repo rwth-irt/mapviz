@@ -30,8 +30,14 @@
 
 #include <mapviz_plugins/float_plugin.h>
 
-#include <pluginlib/class_list_macros.hpp>
+#include <pluginlib/class_list_macros.h>
 #include <mapviz/select_topic_dialog.h>
+
+#include <std_msgs/Float32.h>
+#include <std_msgs/Float64.h>
+#include <marti_common_msgs/Float32Stamped.h>
+#include <marti_common_msgs/Float64Stamped.h>
+#include <marti_sensor_msgs/Velocity.h>
 
 #include <QFontDialog>
 
@@ -48,17 +54,15 @@ namespace mapviz_plugins
   const char* FloatPlugin::OFFSET_Y_KEY = "offset_y";
   const char* FloatPlugin::POSTFIX_KEY = "postfix_text";
 
-  FloatPlugin::FloatPlugin()
-  : MapvizPlugin()
-  , ui_()
-  , config_widget_(new QWidget())
-  , anchor_(TOP_LEFT)
-  , units_(PIXELS)
-  , offset_x_(0)
-  , offset_y_(0)
-  , has_message_(false)
-  , has_painted_(false)
-  , color_(Qt::black)
+  FloatPlugin::FloatPlugin() :
+    config_widget_(new QWidget()),
+    anchor_(TOP_LEFT),
+    units_(PIXELS),
+    offset_x_(0),
+    offset_y_(0),
+    has_message_(false),
+    has_painted_(false),
+    color_(Qt::black)
   {
     ui_.setupUi(config_widget_);
     // Set background white
@@ -88,18 +92,22 @@ namespace mapviz_plugins
     ui_.color->setColor(color_);
   }
 
+  FloatPlugin::~FloatPlugin()
+  {
+  }
+
   bool FloatPlugin::Initialize(QGLWidget* canvas)
   {
     canvas_ = canvas;
     return true;
   }
 
-  void FloatPlugin::Draw(double, double, double)
+  void FloatPlugin::Draw(double x, double y, double scale)
   {
     // This plugin doesn't do any  OpenGL drawing.
   }
 
-  void FloatPlugin::Paint(QPainter* painter, double, double, double)
+  void FloatPlugin::Paint(QPainter* painter, double x, double y, double scale)
   {
     if (has_message_)
     {
@@ -307,16 +315,16 @@ namespace mapviz_plugins
   void FloatPlugin::SelectTopic()
   {
     std::vector<std::string> topics;
-    topics.emplace_back("std_msgs/msg/Float32");
-    topics.emplace_back("std_msgs/msg/Float64");
-    topics.emplace_back("marti_common_msgs/msg/Float32Stamped");
-    topics.emplace_back("marti_common_msgs/msg/Float64Stamped");
-    topics.emplace_back("marti_sensor_msgs/msg/Velocity");
-    std::string topic = mapviz::SelectTopicDialog::selectTopic(node_, topics);
+    topics.push_back("std_msgs/Float32");
+    topics.push_back("std_msgs/Float64");
+    topics.push_back("marti_common_msgs/Float32Stamped");
+    topics.push_back("marti_common_msgs/Float64Stamped");
+    topics.push_back("marti_sensor_msgs/Velocity");
+    ros::master::TopicInfo topic = mapviz::SelectTopicDialog::selectTopic(topics);
 
-    if (!topic.empty())
+    if (!topic.name.empty())
     {
-      ui_.topic->setText(QString::fromStdString(topic));
+      ui_.topic->setText(QString::fromStdString(topic.name));
       TopicEdited();
     }
   }
@@ -330,35 +338,14 @@ namespace mapviz_plugins
       has_message_ = false;
       PrintWarning("No messages received.");
 
-      float32_sub_.reset();
-      float64_sub_.reset();
-      float32_stamped_sub_.reset();
-      float64_stamped_sub_.reset();
-      velocity_sub_.reset();
+      float_sub_.shutdown();
 
       topic_ = topic;
       if (!topic.empty())
       {
-        float32_sub_ = node_->create_subscription<std_msgs::msg::Float32>(topic_, 1,
-            [this](const std_msgs::msg::Float32::ConstSharedPtr msg) {
-          floatCallback(msg->data);
-        });
-        float64_sub_ = node_->create_subscription<std_msgs::msg::Float64>(topic_, 1,
-            [this](const std_msgs::msg::Float64::ConstSharedPtr msg) {
-          floatCallback(msg->data);
-        });
-        float32_stamped_sub_ = node_->create_subscription<marti_common_msgs::msg::Float32Stamped>(topic_, 1,
-            [this](const marti_common_msgs::msg::Float32Stamped::ConstSharedPtr msg) {
-          floatCallback(msg->value);
-        });
-        float64_stamped_sub_ = node_->create_subscription<marti_common_msgs::msg::Float64Stamped>(topic_, 1,
-            [this](const marti_common_msgs::msg::Float64Stamped::ConstSharedPtr msg) {
-          floatCallback(msg->value);
-        });
-        velocity_sub_ = node_->create_subscription<marti_sensor_msgs::msg::Velocity>(topic_, 1,
-            [this](const marti_sensor_msgs::msg::Velocity::ConstSharedPtr msg) {
-          floatCallback(msg->velocity);
-        });
+        float_sub_ = node_.subscribe<topic_tools::ShapeShifter>(topic_, 1, &FloatPlugin::floatCallback, this);
+
+        ROS_INFO("Subscribing to %s", topic_.c_str());
       }
     }
   }
@@ -425,8 +412,35 @@ namespace mapviz_plugins
     offset_y_ = offset;
   }
 
-  void FloatPlugin::floatCallback(double value)
+  template <class T, class M>
+  bool is_instance(const M& msg)
   {
+    return msg->getDataType() == ros::message_traits::datatype<T>();
+  }
+
+  void FloatPlugin::floatCallback(const topic_tools::ShapeShifter::ConstPtr& msg)
+  {
+    double value = 0.0;
+    if (is_instance<std_msgs::Float32>(msg))
+    {
+      value = msg->instantiate<std_msgs::Float32>()->data;
+    }
+    if (is_instance<std_msgs::Float64>(msg))
+    {
+      value = msg->instantiate<std_msgs::Float64>()->data;
+    }
+    else if (is_instance<marti_common_msgs::Float32Stamped>(msg))
+    {
+      value = msg->instantiate<marti_common_msgs::Float32Stamped>()->value;
+    }
+    else if (is_instance<marti_common_msgs::Float64Stamped>(msg))
+    {
+      value = msg->instantiate<marti_common_msgs::Float64Stamped>()->value;
+    }
+    else if (is_instance<marti_sensor_msgs::Velocity>(msg))
+    {
+      value = msg->instantiate<marti_sensor_msgs::Velocity>()->velocity;
+    }
 
     std::string str = std::to_string(value);
     str += postfix_;

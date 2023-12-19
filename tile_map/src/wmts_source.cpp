@@ -66,6 +66,7 @@ namespace tile_map
     url.replace(QString::fromStdString("{x}"), QString::number(x));
     url.replace(QString::fromStdString("{y}"), QString::number(y));
 
+
     return url;
   }
 }

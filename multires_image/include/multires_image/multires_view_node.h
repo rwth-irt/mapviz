@@ -43,7 +43,7 @@
 #include <QShowEvent>
 
 // ROS libraries
-#include <rclcpp/rclcpp.hpp>
+#include <ros/ros.h>
 
 #include <multires_image/QGLMap.h>
 #include <multires_image/tile_set.h>
@@ -56,9 +56,9 @@ namespace multires_image
 
   public:
     MultiresViewNode(int argc, char **argv, QWidget *parent = 0, Qt::WindowFlags flags = 0);
-    ~MultiresViewNode() override = default;
+    ~MultiresViewNode();
 
-    virtual void showEvent(QShowEvent* event) override;
+    virtual void showEvent(QShowEvent* event);
 
     void Initialize();
 
@@ -70,7 +70,7 @@ namespace multires_image
     int argc_;
     char** argv_;
 
-    rclcpp::Node::SharedPtr node_;
+    ros::NodeHandle* node_;
     boost::thread*  thread_;
 
     bool initialized_;

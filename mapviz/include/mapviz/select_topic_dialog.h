@@ -26,18 +26,16 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 // *****************************************************************************
-#ifndef MAPVIZ__SELECT_TOPIC_DIALOG_H_
-#define MAPVIZ__SELECT_TOPIC_DIALOG_H_
+#ifndef MAPVIZ_SELECT_TOPIC_DIALOG_H_
+#define MAPVIZ_SELECT_TOPIC_DIALOG_H_
 
-#include <rclcpp/rclcpp.hpp>
-
-#include <QDialog>
-
-#include <map>
-#include <memory>
 #include <set>
 #include <string>
 #include <vector>
+
+#include <QDialog>
+
+#include <ros/master.h>
 
 QT_BEGIN_NAMESPACE
 class QLineEdit;
@@ -66,10 +64,9 @@ class SelectTopicDialog : public QDialog
    * selection, the topic and datatype fields of the returned topic
    * info will be empty.
    */
-  static std::string selectTopic(
-    const rclcpp::Node::SharedPtr& node,
+  static ros::master::TopicInfo selectTopic(
     const std::string &datatype,
-    QWidget *parent = nullptr);
+    QWidget *parent=0);
 
   /**
    * Present the user with a dialog to select a single topic This is a
@@ -79,11 +76,10 @@ class SelectTopicDialog : public QDialog
    * selection, the topic and datatype fields of the returned topic
    * info will be empty.
    */
-  static std::string selectTopic(
-    const rclcpp::Node::SharedPtr& node,
+  static ros::master::TopicInfo selectTopic(
     const std::string &datatype1,
     const std::string &datatype2,
-    QWidget *parent = nullptr);
+    QWidget *parent=0);
 
   /**
    * Present the user with a dialog to select a single topic.
@@ -92,11 +88,10 @@ class SelectTopicDialog : public QDialog
    * selection, the topic and datatype fields of the returned topic
    * info will be empty.
    */
-  static std::string selectTopic(
-    const rclcpp::Node::SharedPtr& node,
+  static ros::master::TopicInfo selectTopic(
     const std::vector<std::string> &datatypes,
-    QWidget *parent = nullptr);
-
+    QWidget *parent=0);
+  
   /**
    * Present the user with a dialog to select a multiple topics.  This
    * is a convenience wrapper for the common case where only one
@@ -105,10 +100,9 @@ class SelectTopicDialog : public QDialog
    * If the user cancels the selection or doesn't make a valid
    * selection, the returned vector will be empty.
    */
-  static std::vector<std::string> selectTopics(
-    const rclcpp::Node::SharedPtr& node,
+  static std::vector<ros::master::TopicInfo> selectTopics(
     const std::string &datatype,
-    QWidget *parent = nullptr);
+    QWidget *parent=0);
 
   /**
    * Present the user with a dialog to select a multiple topics.  This
@@ -118,11 +112,10 @@ class SelectTopicDialog : public QDialog
    * If the user cancels the selection or doesn't make a valid
    * selection, the returned vector will be empty.
    */
-  static std::vector<std::string> selectTopics(
-    const rclcpp::Node::SharedPtr& node,
+  static std::vector<ros::master::TopicInfo> selectTopics(
     const std::string &datatype1,
     const std::string &datatype2,
-    QWidget *parent = nullptr);
+    QWidget *parent=0);
 
   /**
    * Present the user with a dialog to select a multiple topics.
@@ -130,17 +123,15 @@ class SelectTopicDialog : public QDialog
    * If the user cancels the selection or doesn't make a valid
    * selection, the returned vector will be empty.
    */
-  static std::vector<std::string> selectTopics(
-    const rclcpp::Node::SharedPtr& node,
+  static std::vector<ros::master::TopicInfo> selectTopics(
     const std::vector<std::string> &datatypes,
-    QWidget *parent = nullptr);
+    QWidget *parent=0);
 
   /**
    * Constructor for the SelectTopicDialog.
    */
-  explicit SelectTopicDialog(const rclcpp::Node::SharedPtr& node,
-      QWidget *parent = nullptr);
-
+  SelectTopicDialog(QWidget *parent=0);
+  
   /**
    * Choose whether the user can select one (allow=false) or multiple
    * (allow=true) topics.  The default is false.
@@ -160,19 +151,19 @@ class SelectTopicDialog : public QDialog
    * there is no selection, the returned info will have an empty topic
    * name and datatype.
    */
-  std::string selectedTopic() const;
+  ros::master::TopicInfo selectedTopic() const;
   /**
    * Returns the currently selected topics.  If there is no selection,
    * the returned vector will be empty.
    */
-  std::vector<std::string> selectedTopics() const;
+  std::vector<ros::master::TopicInfo> selectedTopics() const;
 
  private:
-  void timerEvent(QTimerEvent *) override;
-  void closeEvent(QCloseEvent *) override;
+  void timerEvent(QTimerEvent *);
+  void closeEvent(QCloseEvent *);
 
-  std::vector<std::string> filterTopics(
-    const std::map<std::string, std::vector<std::string>> &) const;
+  std::vector<ros::master::TopicInfo> filterTopics(
+    const std::vector<ros::master::TopicInfo> &) const;
 
  private Q_SLOTS:
   void fetchTopics();
@@ -180,12 +171,9 @@ class SelectTopicDialog : public QDialog
 
  private:
   std::set<std::string> allowed_datatypes_;
-  std::map<std::string, std::vector<std::string>> known_topics_;
-
-  std::vector<std::string> displayed_topics_;
+  std::vector<ros::master::TopicInfo> known_topics_;
+  std::vector<ros::master::TopicInfo> displayed_topics_;
   int fetch_topics_timer_id_;
-
-  std::shared_ptr<rclcpp::Node> nh_;   // This may need to be a shared instance of Mapviz's node
 
   QPushButton *ok_button_;
   QPushButton *cancel_button_;
@@ -193,5 +181,4 @@ class SelectTopicDialog : public QDialog
   QLineEdit *name_filter_;
 };  // class SelectTopicDialog
 }  // namespace mapviz
-
-#endif  // MAPVIZ__SELECT_TOPIC_DIALOG_H_
+#endif  // MAPVIZ_SELECT_TOPIC_DIALOG_H_

@@ -29,6 +29,10 @@
 
 #include <mapviz_plugins/plan_route_plugin.h>
 
+// C++ standard libraries
+#include <cstdio>
+#include <vector>
+
 // QT libraries
 #include <QDateTime>
 #include <QDialog>
@@ -38,28 +42,19 @@
 #include <QPalette>
 #include <QStaticText>
 
+#include <opencv2/core/core.hpp>
+
 // ROS libraries
-#include <rclcpp/rclcpp.hpp>
+#include <ros/master.h>
 
 #include <swri_route_util/util.h>
 #include <swri_transform_util/frames.h>
 
-#include <marti_nav_msgs/srv/plan_route.hpp>
+#include <marti_nav_msgs/PlanRoute.h>
 
 // Declare plugin
-#include <pluginlib/class_list_macros.hpp>
-
-// C++ standard libraries
-#include <chrono>
-#include <cstdio>
-#include <limits>
-#include <memory>
-#include <string>
-#include <vector>
-
+#include <pluginlib/class_list_macros.h>
 PLUGINLIB_EXPORT_CLASS(mapviz_plugins::PlanRoutePlugin, mapviz::MapvizPlugin)
-
-using namespace std::chrono_literals;
 
 namespace mnm = marti_nav_msgs;
 namespace sru = swri_route_util;
@@ -67,17 +62,14 @@ namespace stu = swri_transform_util;
 
 namespace mapviz_plugins
 {
-  PlanRoutePlugin::PlanRoutePlugin()
-  : MapvizPlugin()
-  , ui_()
-  , config_widget_(new QWidget())
-  , map_canvas_(nullptr)
-  , failed_service_(false)
-  , selected_point_(-1)
-  , is_mouse_down_(false)
-  , mouse_down_time_(0)
-  , max_ms_(Q_INT64_C(500))
-  , max_distance_(2.0)
+  PlanRoutePlugin::PlanRoutePlugin() :
+    config_widget_(new QWidget()),
+    map_canvas_(NULL),
+    failed_service_(false),
+    selected_point_(-1),
+    is_mouse_down_(false),
+    max_ms_(Q_INT64_C(500)),
+    max_distance_(2.0)
   {
     ui_.setupUi(config_widget_);
 
@@ -129,13 +121,11 @@ namespace mapviz_plugins
       if (route_topic_ != ui_.topic->text().toStdString())
       {
         route_topic_ = ui_.topic->text().toStdString();
-        route_pub_.reset();
-        route_pub_ = node_->create_publisher<swri_route_util::Route>(
-          route_topic_,
-          rclcpp::QoS(1));
+        route_pub_.shutdown();
+        route_pub_ = node_.advertise<sru::Route>(route_topic_, 1, true);
       }
 
-      route_pub_->publish(*route_preview_);
+      route_pub_.publish(route_preview_);
     }
   }
 
@@ -149,55 +139,35 @@ namespace mapviz_plugins
     }
 
     std::string service = ui_.service->text().toStdString();
-    if (service.empty())
+    ros::ServiceClient client = node_.serviceClient<mnm::PlanRoute>(service);
+
+    mnm::PlanRoute plan_route;
+    plan_route.request.header.frame_id = stu::_wgs84_frame;
+    plan_route.request.header.stamp = ros::Time::now();
+    plan_route.request.plan_from_vehicle = static_cast<unsigned char>(start_from_vehicle);
+    plan_route.request.waypoints = waypoints_;
+
+    if (client.call(plan_route))
     {
-      PrintError("Service name may not be empty.");
-      return;
-    }
-    auto client = node_->create_client<marti_nav_msgs::srv::PlanRoute>(service);
-    client->wait_for_service(1ms);
-
-    if (!client->service_is_ready())
-    {
-      PrintError("Service is unavailable.");
-      return;
-    }
-
-    auto plan_route = std::make_shared<marti_nav_msgs::srv::PlanRoute::Request>();
-
-    plan_route->header.frame_id = swri_transform_util::_wgs84_frame;
-    plan_route->header.stamp = node_->now();
-    plan_route->plan_from_vehicle = static_cast<unsigned char>(start_from_vehicle);
-    plan_route->waypoints = waypoints_;
-
-    PrintInfo("Sending route...");
-    auto result = client->async_send_request(plan_route,
-        std::bind(&PlanRoutePlugin::ClientCallback, this, std::placeholders::_1));
-  }
-
-  void PlanRoutePlugin::ClientCallback(
-    rclcpp::Client<marti_nav_msgs::srv::PlanRoute>::SharedFuture future)
-  {
-    RCLCPP_ERROR(node_->get_logger(), "Request callback happened");
-    const auto& result = future.get();
-    if (future.valid())
-    {
-      if (result->success)
+      if (plan_route.response.success)
       {
-        PrintInfo("OK");
-        route_preview_ = std::make_shared<swri_route_util::Route>(result->route);
+        route_preview_ = boost::make_shared<sru::Route>(plan_route.response.route);
         failed_service_ = false;
-      } else {
-        PrintError(result->message);
+      }
+      else
+      {
+        PrintError(plan_route.response.message);
         failed_service_ = true;
       }
-    } else {
-      PrintError("Error calling PlanRoute service");
+    }
+    else
+    {
+      PrintError("Failed to plan route.");
       failed_service_ = true;
     }
   }
 
-  void PlanRoutePlugin::Retry()
+  void PlanRoutePlugin::Retry(const ros::TimerEvent& e)
   {
     PlanRoute();
   }
@@ -232,10 +202,10 @@ namespace mapviz_plugins
 
   bool PlanRoutePlugin::Initialize(QGLWidget* canvas)
   {
-    map_canvas_ = dynamic_cast<mapviz::MapCanvas*>(canvas);
+    map_canvas_ = static_cast<mapviz::MapCanvas*>(canvas);
     map_canvas_->installEventFilter(this);
 
-    retry_timer_ = node_->create_wall_timer(1000ms, [this](){Retry();});
+    retry_timer_ = node_.createTimer(ros::Duration(1), &PlanRoutePlugin::Retry, this);
 
     initialized_ = true;
     return true;
@@ -246,11 +216,11 @@ namespace mapviz_plugins
     switch (event->type())
     {
       case QEvent::MouseButtonPress:
-        return handleMousePress(dynamic_cast<QMouseEvent*>(event));
+        return handleMousePress(static_cast<QMouseEvent*>(event));
       case QEvent::MouseButtonRelease:
-        return handleMouseRelease(dynamic_cast<QMouseEvent*>(event));
+        return handleMouseRelease(static_cast<QMouseEvent*>(event));
       case QEvent::MouseMove:
-        return handleMouseMove(dynamic_cast<QMouseEvent*>(event));
+        return handleMouseMove(static_cast<QMouseEvent*>(event));
       default:
         return false;
     }
@@ -262,20 +232,23 @@ namespace mapviz_plugins
     int closest_point = 0;
     double closest_distance = std::numeric_limits<double>::max();
 
+#if QT_VERSION >= 0x050000
     QPointF point = event->localPos();
+#else
+    QPointF point = event->posF();
+#endif
     stu::Transform transform;
     if (tf_manager_->GetTransform(target_frame_, stu::_wgs84_frame, transform))
     {
       for (size_t i = 0; i < waypoints_.size(); i++)
       {
-        tf2::Vector3 waypoint(
+        tf::Vector3 waypoint(
             waypoints_[i].position.x,
             waypoints_[i].position.y,
             0.0);
         waypoint = transform * waypoint;
 
-        QPointF transformed =
-        map_canvas_->FixedFrameToMapGlCoord(QPointF(waypoint.x(), waypoint.y()));
+        QPointF transformed = map_canvas_->FixedFrameToMapGlCoord(QPointF(waypoint.x(), waypoint.y()));
 
         double distance = QLineF(transformed, point).length();
 
@@ -293,13 +266,21 @@ namespace mapviz_plugins
       {
         selected_point_ = closest_point;
         return true;
-      } else {
+      }
+      else
+      {
         is_mouse_down_ = true;
+#if QT_VERSION >= 0x050000
         mouse_down_pos_ = event->localPos();
+#else
+        mouse_down_pos_ = event->posF();
+#endif
         mouse_down_time_ = QDateTime::currentMSecsSinceEpoch();
         return false;
       }
-    } else if (event->button() == Qt::RightButton) {
+    }
+    else if (event->button() == Qt::RightButton)
+    {
       if (closest_distance < 15)
       {
         waypoints_.erase(waypoints_.begin() + closest_point);
@@ -313,14 +294,18 @@ namespace mapviz_plugins
 
   bool PlanRoutePlugin::handleMouseRelease(QMouseEvent* event)
   {
+#if QT_VERSION >= 0x050000
     QPointF point = event->localPos();
+#else
+    QPointF point = event->posF();
+#endif
     if (selected_point_ >= 0 && static_cast<size_t>(selected_point_) < waypoints_.size())
     {
       stu::Transform transform;
       if (tf_manager_->GetTransform(stu::_wgs84_frame, target_frame_, transform))
       {
         QPointF transformed = map_canvas_->MapGlCoordToFixedFrame(point);
-        tf2::Vector3 position(transformed.x(), transformed.y(), 0.0);
+        tf::Vector3 position(transformed.x(), transformed.y(), 0.0);
         position = transform * position;
         waypoints_[selected_point_].position.x = position.x();
         waypoints_[selected_point_].position.y = position.y();
@@ -329,7 +314,9 @@ namespace mapviz_plugins
 
       selected_point_ = -1;
       return true;
-    } else if (is_mouse_down_) {
+    }
+    else if (is_mouse_down_)
+    {
       qreal distance = QLineF(mouse_down_pos_, point).length();
       qint64 msecsDiff = QDateTime::currentMSecsSinceEpoch() - mouse_down_time_;
 
@@ -342,12 +329,12 @@ namespace mapviz_plugins
         QPointF transformed = map_canvas_->MapGlCoordToFixedFrame(point);
 
         stu::Transform transform;
-        tf2::Vector3 position(transformed.x(), transformed.y(), 0.0);
+        tf::Vector3 position(transformed.x(), transformed.y(), 0.0);
         if (tf_manager_->GetTransform(stu::_wgs84_frame, target_frame_, transform))
         {
           position = transform * position;
 
-          geometry_msgs::msg::Pose pose;
+          geometry_msgs::Pose pose;
           pose.position.x = position.x();
           pose.position.y = position.y();
           waypoints_.push_back(pose);
@@ -364,12 +351,16 @@ namespace mapviz_plugins
   {
     if (selected_point_ >= 0 && static_cast<size_t>(selected_point_) < waypoints_.size())
     {
+#if QT_VERSION >= 0x050000
       QPointF point = event->localPos();
+#else
+      QPointF point = event->posF();
+#endif
       stu::Transform transform;
       if (tf_manager_->GetTransform(stu::_wgs84_frame, target_frame_, transform))
       {
         QPointF transformed = map_canvas_->MapGlCoordToFixedFrame(point);
-        tf2::Vector3 position(transformed.x(), transformed.y(), 0.0);
+        tf::Vector3 position(transformed.x(), transformed.y(), 0.0);
         position = transform * position;
         waypoints_[selected_point_].position.y = position.y();
         waypoints_[selected_point_].position.x = position.x();
@@ -398,13 +389,15 @@ namespace mapviz_plugins
           glColor4d(color.redF(), color.greenF(), color.blueF(), 1.0);
           glBegin(GL_LINE_STRIP);
 
-          for (auto & point : route.points)
+          for (size_t i = 0; i < route.points.size(); i++)
           {
-            glVertex2d(point.position().x(), point.position().y());
+            glVertex2d(route.points[i].position().x(), route.points[i].position().y());
           }
 
           glEnd();
         }
+
+        PrintInfo("OK");
       }
 
       // Draw waypoints
@@ -413,14 +406,16 @@ namespace mapviz_plugins
       glColor4f(0.0, 1.0, 1.0, 1.0);
       glBegin(GL_POINTS);
 
-      for (auto & waypoint : waypoints_)
+      for (size_t i = 0; i < waypoints_.size(); i++)
       {
-        tf2::Vector3 point(waypoint.position.x, waypoint.position.y, 0);
+        tf::Vector3 point(waypoints_[i].position.x, waypoints_[i].position.y, 0);
         point = transform * point;
         glVertex2d(point.x(), point.y());
       }
       glEnd();
-    } else {
+    }
+    else
+    {
       PrintError("Failed to transform.");
     }
   }
@@ -439,15 +434,12 @@ namespace mapviz_plugins
     {
       for (size_t i = 0; i < waypoints_.size(); i++)
       {
-        tf2::Vector3 point(waypoints_[i].position.x, waypoints_[i].position.y, 0);
+        tf::Vector3 point(waypoints_[i].position.x, waypoints_[i].position.y, 0);
         point = transform * point;
         QPointF gl_point = map_canvas_->FixedFrameToMapGlCoord(QPointF(point.x(), point.y()));
         QPointF corner(gl_point.x() - 20, gl_point.y() - 20);
         QRectF rect(corner, QSizeF(40, 40));
-        painter->drawText(
-          rect,
-          Qt::AlignHCenter | Qt::AlignVCenter,
-          QString::fromStdString(std::to_string(i + 1)));
+        painter->drawText(rect, Qt::AlignHCenter | Qt::AlignVCenter, QString::fromStdString(boost::lexical_cast<std::string>(i + 1)));
       }
     }
 
@@ -458,22 +450,26 @@ namespace mapviz_plugins
   {
     if (node["route_topic"])
     {
-      std::string route_topic = node["route_topic"].as<std::string>();
+      std::string route_topic;
+      node["route_topic"] >> route_topic;
       ui_.topic->setText(route_topic.c_str());
     }
     if (node["color"])
     {
-      std::string color = node["color"].as<std::string>();
+      std::string color;
+      node["color"] >> color;
       ui_.color->setColor(QColor(color.c_str()));
     }
     if (node["service"])
     {
-      std::string service = node["service"].as<std::string>();
+      std::string service;
+      node["service"] >> service;
       ui_.service->setText(service.c_str());
     }
     if (node["start_from_vehicle"])
     {
-      bool start_from_vehicle = node["start_from_vehicle"].as<bool>();
+      bool start_from_vehicle;
+      node["start_from_vehicle"] >> start_from_vehicle;
       ui_.start_from_vehicle->setChecked(start_from_vehicle);
     }
 
@@ -494,4 +490,4 @@ namespace mapviz_plugins
     bool start_from_vehicle = ui_.start_from_vehicle->isChecked();
     emitter << YAML::Key << "start_from_vehicle" << YAML::Value << start_from_vehicle;
   }
-}   // namespace mapviz_plugins
+}

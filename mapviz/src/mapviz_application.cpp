@@ -17,12 +17,12 @@
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 // IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL Southwest Research Institute® BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+// ARE DISCLAIMED. IN NO EVENT SHALL Southwest Research Institute® BE LIABLE 
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY 
 // OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 // DAMAGE.
 //
@@ -30,13 +30,12 @@
 
 #include "mapviz/mapviz_application.h"
 
-#include "rclcpp/rclcpp.hpp"
+#include <ros/ros.h>
 
 namespace mapviz
 {
-  MapvizApplication::MapvizApplication(int& argc, char** argv, rclcpp::Logger logger) :
-    QApplication(argc, argv),
-    logger_(logger)
+  MapvizApplication::MapvizApplication(int& argc, char** argv) :
+    QApplication(argc, argv)
   {
   }
 
@@ -45,20 +44,13 @@ namespace mapviz
     try {
       return QApplication::notify(receiver, event);
     }
-    catch (const rclcpp::exceptions::RCLError& e) {
-      RCLCPP_ERROR(logger_,
-        "Unhandled RCLError in Qt event loop: %s", e.what());
+    catch (const ros::Exception& e) {
+      ROS_ERROR("Unhandled ros::Exception in Qt event loop: %s", e.what());
     }
     catch (const std::exception& e) {
-      RCLCPP_ERROR(logger_,
-        "Unhandled std::exception in Qt event loop: %s", e.what());
+      ROS_ERROR("Unhandled std::exception in Qt event loop: %s", e.what());
     }
 
     return false;
   }
-
-  void MapvizApplication::setLogger(const rclcpp::Logger &logger)
-  {
-    logger_ = logger;
-  }
-}   // namespace mapviz
+}

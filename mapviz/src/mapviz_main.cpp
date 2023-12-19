@@ -27,18 +27,12 @@
 //
 // *****************************************************************************
 
-#include "mapviz/mapviz.hpp"
+#include "mapviz/mapviz.h"
 #include "mapviz/mapviz_application.h"
 #include <GL/glut.h>
 
 int main(int argc, char **argv)
 {
-  // Initialize ROS; spinning on the Node is handled in mapviz.cpp
-  rclcpp::init(argc, argv);
-
-  // Initialize Qt resources
-  Q_INIT_RESOURCE(icons);
-
   // Initialize QT
   mapviz::MapvizApplication app(argc, argv);
 
@@ -47,8 +41,7 @@ int main(int argc, char **argv)
 
   // Start mapviz
   mapviz::Mapviz mapviz(true, argc, argv);
-  app.setLogger(mapviz.GetNode()->get_logger());
   mapviz.show();
 
-  return mapviz::MapvizApplication::exec();
+  return app.exec();
 }

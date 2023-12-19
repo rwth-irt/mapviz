@@ -29,6 +29,10 @@
 
 #include <mapviz_plugins/route_plugin.h>
 
+// C++ standard libraries
+#include <cstdio>
+#include <vector>
+
 // QT libraries
 #include <QDialog>
 #include <QGLWidget>
@@ -38,22 +42,17 @@
 #include <opencv2/core/core.hpp>
 
 // ROS libraries
-#include <rclcpp/rclcpp.hpp>
+#include <ros/master.h>
 
 #include <swri_image_util/geometry_util.h>
 #include <swri_route_util/util.h>
 #include <swri_transform_util/transform_util.h>
 #include <mapviz/select_topic_dialog.h>
 
-#include <marti_nav_msgs/msg/route.hpp>
+#include <marti_nav_msgs/Route.h>
 
 // Declare plugin
-#include <pluginlib/class_list_macros.hpp>
-
-// C++ standard libraries
-#include <cstdio>
-#include <string>
-#include <vector>
+#include <pluginlib/class_list_macros.h>
 
 PLUGINLIB_EXPORT_CLASS(mapviz_plugins::RoutePlugin, mapviz::MapvizPlugin)
 
@@ -62,10 +61,7 @@ namespace stu = swri_transform_util;
 
 namespace mapviz_plugins
 {
-  RoutePlugin::RoutePlugin()
-  : MapvizPlugin()
-  , ui_()
-  , config_widget_(new QWidget()), draw_style_(LINES)
+  RoutePlugin::RoutePlugin() : config_widget_(new QWidget()), draw_style_(LINES)
   {
     ui_.setupUi(config_widget_);
 
@@ -92,6 +88,10 @@ namespace mapviz_plugins
                      SLOT(DrawIcon()));
   }
 
+  RoutePlugin::~RoutePlugin()
+  {
+  }
+
   void RoutePlugin::DrawIcon()
   {
     if (icon_)
@@ -110,7 +110,9 @@ namespace mapviz_plugins
         pen.setCapStyle(Qt::RoundCap);
         painter.setPen(pen);
         painter.drawPoint(8, 8);
-      } else if (draw_style_ == LINES) {
+      }
+      else if (draw_style_ == LINES)
+      {
         pen.setWidth(3);
         pen.setCapStyle(Qt::FlatCap);
         painter.setPen(pen);
@@ -126,7 +128,9 @@ namespace mapviz_plugins
     if (style == "lines")
     {
       draw_style_ = LINES;
-    } else if (style == "points") {
+    }
+    else if (style == "points")
+    {
       draw_style_ = POINTS;
     }
     DrawIcon();
@@ -134,29 +138,29 @@ namespace mapviz_plugins
 
   void RoutePlugin::SelectTopic()
   {
-    std::string topic =
-        mapviz::SelectTopicDialog::selectTopic(node_, "marti_nav_msgs/msg/Route");
+    ros::master::TopicInfo topic =
+        mapviz::SelectTopicDialog::selectTopic("marti_nav_msgs/Route");
 
-    if (topic.empty())
+    if (topic.name.empty())
     {
       return;
     }
 
-    ui_.topic->setText(QString::fromStdString(topic));
+    ui_.topic->setText(QString::fromStdString(topic.name));
     TopicEdited();
   }
 
   void RoutePlugin::SelectPositionTopic()
   {
-    std::string topic =
-        mapviz::SelectTopicDialog::selectTopic(node_, "marti_nav_msgs/msg/RoutePosition");
+    ros::master::TopicInfo topic =
+        mapviz::SelectTopicDialog::selectTopic("marti_nav_msgs/RoutePosition");
 
-    if (topic.empty())
+    if (topic.name.empty())
     {
       return;
     }
 
-    ui_.positiontopic->setText(QString::fromStdString(topic));
+    ui_.positiontopic->setText(QString::fromStdString(topic.name));
     PositionTopicEdited();
   }
 
@@ -167,19 +171,15 @@ namespace mapviz_plugins
     {
       src_route_ = sru::Route();
 
-      route_sub_.reset();
+      route_sub_.shutdown();
 
       topic_ = topic;
       if (!topic.empty())
       {
         route_sub_ =
-            node_->create_subscription<marti_nav_msgs::msg::Route>(
-              topic_,
-              rclcpp::QoS(1),
-              std::bind(&RoutePlugin::RouteCallback, this, std::placeholders::_1)
-            );
+            node_.subscribe(topic_, 1, &RoutePlugin::RouteCallback, this);
 
-        RCLCPP_INFO(node_->get_logger(), "Subscribing to %s", topic_.c_str());
+        ROS_INFO("Subscribing to %s", topic_.c_str());
       }
     }
   }
@@ -190,29 +190,26 @@ namespace mapviz_plugins
     if (topic != position_topic_)
     {
       src_route_position_.reset();
-      position_sub_.reset();
+      position_sub_.shutdown();
 
       if (!topic.empty())
       {
         position_topic_ = topic;
-        position_sub_ = node_->create_subscription<marti_nav_msgs::msg::RoutePosition>(
-          topic_,
-          rclcpp::QoS(1),
-          std::bind(&RoutePlugin::PositionCallback, this, std::placeholders::_1)
-        );
+        position_sub_ = node_.subscribe(position_topic_, 1,
+                                        &RoutePlugin::PositionCallback, this);
 
-        RCLCPP_INFO(node_->get_logger(), "Subscribing to %s", position_topic_.c_str());
+        ROS_INFO("Subscribing to %s", position_topic_.c_str());
       }
     }
   }
 
   void RoutePlugin::PositionCallback(
-      const marti_nav_msgs::msg::RoutePosition::SharedPtr msg)
+      const marti_nav_msgs::RoutePositionConstPtr& msg)
   {
     src_route_position_ = msg;
   }
 
-  void RoutePlugin::RouteCallback(const marti_nav_msgs::msg::Route::SharedPtr msg)
+  void RoutePlugin::RouteCallback(const marti_nav_msgs::RouteConstPtr& msg)
   {
     src_route_ = sru::Route(*msg);
   }
@@ -260,11 +257,11 @@ namespace mapviz_plugins
     sru::Route route = src_route_;
     if (route.header.frame_id.empty())
     {
-      route.header.frame_id = "wgs84";
+      route.header.frame_id = "/wgs84";
     }
 
     stu::Transform transform;
-    if (!GetTransform(route.header.frame_id, rclcpp::Time(), transform))
+    if (!GetTransform(route.header.frame_id, ros::Time(), transform))
     {
       PrintError("Failed to transform route");
       return;
@@ -283,7 +280,9 @@ namespace mapviz_plugins
       if (sru::interpolateRoutePosition(point, route, *src_route_position_, true))
       {
         DrawRoutePoint(point);
-      } else {
+      }
+      else
+      {
         PrintError("Failed to find route position in route.");
         ok = false;
       }
@@ -325,15 +324,17 @@ namespace mapviz_plugins
     {
       glLineWidth(3);
       glBegin(GL_LINE_STRIP);
-    } else {
+    }
+    else
+    {
       glPointSize(2);
       glBegin(GL_POINTS);
     }
 
-    for (const auto & point : route.points)
+    for (size_t i = 0; i < route.points.size(); i++)
     {
-      glVertex2d(point.position().x(),
-                 point.position().y());
+      glVertex2d(route.points[i].position().x(),
+                 route.points[i].position().y());
     }
     glEnd();
   }
@@ -342,11 +343,11 @@ namespace mapviz_plugins
   {
     const double arrow_size = ui_.iconsize->value();
 
-    tf2::Vector3 v1(arrow_size, 0.0, 0.0);
-    tf2::Vector3 v2(0.0, arrow_size / 2.0, 0.0);
-    tf2::Vector3 v3(0.0, -arrow_size / 2.0, 0.0);
+    tf::Vector3 v1(arrow_size, 0.0, 0.0);
+    tf::Vector3 v2(0.0, arrow_size / 2.0, 0.0);
+    tf::Vector3 v3(0.0, -arrow_size / 2.0, 0.0);
 
-    tf2::Transform point_g(point.orientation(), point.position());
+    tf::Transform point_g(point.orientation(), point.position());
 
     v1 = point_g * v1;
     v2 = point_g * v2;
@@ -366,34 +367,41 @@ namespace mapviz_plugins
   {
     if (node["topic"])
     {
-      std::string route_topic = node["topic"].as<std::string>();
+      std::string route_topic;
+      node["topic"] >> route_topic;
       ui_.topic->setText(route_topic.c_str());
     }
     if (node["color"])
     {
-      std::string color = node["color"].as<std::string>();
+      std::string color;
+      node["color"] >> color;
       ui_.color->setColor(QColor(color.c_str()));
     }
     if (node["postopic"])
     {
-      std::string pos_topic = node["postopic"].as<std::string>();
+      std::string pos_topic;
+      node["postopic"] >> pos_topic;
       ui_.positiontopic->setText(pos_topic.c_str());
     }
     if (node["poscolor"])
     {
-      std::string poscolor = node["poscolor"].as<std::string>();
+      std::string poscolor;
+      node["poscolor"] >> poscolor;
       ui_.positioncolor->setColor(QColor(poscolor.c_str()));
     }
 
     if (node["draw_style"])
     {
-      std::string draw_style = node["draw_style"].as<std::string>();
+      std::string draw_style;
+      node["draw_style"] >> draw_style;
 
       if (draw_style == "lines")
       {
         draw_style_ = LINES;
         ui_.drawstyle->setCurrentIndex(0);
-      } else if (draw_style == "points") {
+      }
+      else if (draw_style == "points")
+      {
         draw_style_ = POINTS;
         ui_.drawstyle->setCurrentIndex(1);
       }
@@ -420,4 +428,4 @@ namespace mapviz_plugins
     std::string draw_style = ui_.drawstyle->currentText().toStdString();
     emitter << YAML::Key << "draw_style" << YAML::Value << draw_style;
   }
-}   // namespace mapviz_plugins
+}

@@ -19,6 +19,10 @@
 
 #include <mapviz_plugins/gps_plugin.h>
 
+// C++ standard libraries
+#include <cstdio>
+#include <vector>
+
 // QT libraries
 #include <QDialog>
 #include <QGLWidget>
@@ -27,30 +31,19 @@
 #include <opencv2/core/core.hpp>
 
 // ROS libraries
-#include <rclcpp/rclcpp.hpp>
+#include <ros/master.h>
 
 #include <swri_image_util/geometry_util.h>
 #include <swri_transform_util/transform_util.h>
 #include <mapviz/select_topic_dialog.h>
 
 // Declare plugin
-#include <pluginlib/class_list_macros.hpp>
-
-// C++ standard libraries
-#include <cstdio>
-#include <string>
-#include <utility>
-#include <vector>
-
+#include <pluginlib/class_list_macros.h>
 PLUGINLIB_EXPORT_CLASS(mapviz_plugins::GpsPlugin, mapviz::MapvizPlugin)
 
 namespace mapviz_plugins
 {
-  GpsPlugin::GpsPlugin()
-  : PointDrawingPlugin()
-  , ui_()
-  , config_widget_(new QWidget())
-  , has_message_(false)
+  GpsPlugin::GpsPlugin() : config_widget_(new QWidget())
   {
     ui_.setupUi(config_widget_);
 
@@ -88,13 +81,18 @@ namespace mapviz_plugins
                      SLOT(ClearPoints()));
   }
 
+  GpsPlugin::~GpsPlugin()
+  {
+  }
+
   void GpsPlugin::SelectTopic()
   {
-    std::string topic = mapviz::SelectTopicDialog::selectTopic(node_, "gps_msgs/msg/GPSFix");
+    ros::master::TopicInfo topic =
+        mapviz::SelectTopicDialog::selectTopic("gps_common/GPSFix");
 
-    if (!topic.empty())
+    if (!topic.name.empty())
     {
-      ui_.topic->setText(QString::fromStdString(topic));
+      ui_.topic->setText(QString::fromStdString(topic.name));
       TopicEdited();
     }
   }
@@ -109,21 +107,20 @@ namespace mapviz_plugins
       has_message_ = false;
       PrintWarning("No messages received.");
 
-      gps_sub_.reset();
+      gps_sub_.shutdown();
 
       topic_ = topic;
       if (!topic.empty())
       {
-        gps_sub_ = node_->create_subscription<gps_msgs::msg::GPSFix>(topic_, rclcpp::QoS(1),
-          std::bind(&GpsPlugin::GPSFixCallback, this, std::placeholders::_1));
+        gps_sub_ = node_.subscribe(topic_, 10, &GpsPlugin::GPSFixCallback, this);
 
-        RCLCPP_INFO(node_->get_logger(), "Subscribing to %s", topic_.c_str());
+        ROS_INFO("Subscribing to %s", topic_.c_str());
       }
     }
   }
 
-  void GpsPlugin::GPSFixCallback(const gps_msgs::msg::GPSFix::SharedPtr gps)
-  {
+  void GpsPlugin::GPSFixCallback(const gps_common::GPSFixConstPtr& gps)
+  {  
     if (!tf_manager_->LocalXyUtil()->Initialized())
     {
       return;
@@ -141,17 +138,16 @@ namespace mapviz_plugins
     double y;
     tf_manager_->LocalXyUtil()->ToLocalXy(gps->latitude, gps->longitude, x, y);
 
-    stamped_point.point = tf2::Vector3(x, y, gps->altitude);
+    stamped_point.point = tf::Point(x, y, gps->altitude);
 
     // The GPS "track" is in degrees, but createQuaternionFromYaw expects
     // radians.
     // Furthermore, the track rotates in the opposite direction and is also
     // offset by 90 degrees, so all of that has to be compensated for.
-    auto temp_quat = tf2::Quaternion();
-    temp_quat.setRPY(0, 0, (-gps->track * (M_PI / 180.0)) + M_PI_2);
-    stamped_point.orientation = temp_quat;
+    stamped_point.orientation =
+        tf::createQuaternionFromYaw((-gps->track * (M_PI / 180.0)) + M_PI_2);
 
-    pushPoint( std::move(stamped_point) );
+    pushPoint( std::move( stamped_point) );
   }
 
   void GpsPlugin::PrintError(const std::string& message)
@@ -196,13 +192,15 @@ namespace mapviz_plugins
   {
     if (node["topic"])
     {
-      std::string topic = node["topic"].as<std::string>();
+      std::string topic;
+      node["topic"] >> topic;
       ui_.topic->setText(topic.c_str());
     }
 
     if (node["color"])
     {
-      std::string color = node["color"].as<std::string>();
+      std::string color;
+      node["color"] >> color;
       QColor qcolor(color.c_str());
       SetColor(qcolor);
       ui_.color->setColor(qcolor);
@@ -210,16 +208,21 @@ namespace mapviz_plugins
 
     if (node["draw_style"])
     {
-      std::string draw_style = node["draw_style"].as<std::string>();
+      std::string draw_style;
+      node["draw_style"] >> draw_style;
 
       if (draw_style == "lines")
       {
         ui_.drawstyle->setCurrentIndex(0);
         SetDrawStyle( LINES );
-      } else if (draw_style == "points") {
+      }
+      else if (draw_style == "points")
+      {
         ui_.drawstyle->setCurrentIndex(1);
         SetDrawStyle( POINTS );
-      } else if (draw_style == "arrows") {
+      }
+      else if (draw_style == "arrows")
+      {
         ui_.drawstyle->setCurrentIndex(2);
         SetDrawStyle( ARROWS );
       }
@@ -227,21 +230,24 @@ namespace mapviz_plugins
 
     if (node["position_tolerance"])
     {
-      double position_tolerance = node["position_tolerance"].as<double>();
+      double position_tolerance;
+      node["position_tolerance"] >> position_tolerance;
       ui_.positiontolerance->setValue(position_tolerance);
       PositionToleranceChanged(position_tolerance);
     }
 
     if (node["buffer_size"])
     {
-      double buffer_size = node["buffer_size"].as<double>();
+      double buffer_size;
+      node["buffer_size"] >> buffer_size;
       ui_.buffersize->setValue(buffer_size);
       BufferSizeChanged(buffer_size);
     }
 
     if (node["show_laps"])
     {
-      bool show_laps = node["show_laps"].as<bool>();
+      bool show_laps = false;
+      node["show_laps"] >> show_laps;
       ui_.show_laps->setChecked(show_laps);
       LapToggled(show_laps);
     }
@@ -282,11 +288,8 @@ namespace mapviz_plugins
     bool show_laps = ui_.show_laps->isChecked();
     emitter << YAML::Key << "show_laps" << YAML::Value << show_laps;
 
-    emitter << YAML::Key
-      << "static_arrow_sizes"
-      << YAML::Value
-      << ui_.static_arrow_sizes->isChecked();
+    emitter << YAML::Key << "static_arrow_sizes" << YAML::Value << ui_.static_arrow_sizes->isChecked();
 
     emitter << YAML::Key << "arrow_size" << YAML::Value << ui_.arrow_size->value();
   }
-}   // namespace mapviz_plugins
+}

@@ -27,15 +27,14 @@
 //
 // *****************************************************************************
 
-#ifndef MAPVIZ__VIDEO_WRITER_H_
-#define MAPVIZ__VIDEO_WRITER_H_
+#ifndef MAPVIZ_VIDEO_WRITER_H
+#define MAPVIZ_VIDEO_WRITER_H
 
 #include <QObject>
 #include <QMutex>
 #include <QImage>
 
-#include <memory>
-#include <string>
+#include <boost/shared_ptr.hpp>
 
 #ifndef Q_MOC_RUN
 #include <opencv2/highgui/highgui.hpp>
@@ -43,28 +42,28 @@
 
 namespace mapviz
 {
-class VideoWriter : public QObject
-{
-  Q_OBJECT
+  class VideoWriter : public QObject
+  {
+    Q_OBJECT
 
-public:
-  VideoWriter() :
-      video_mutex_(QMutex::Recursive)
-  {}
+  public:
+    VideoWriter() :
+        video_mutex_(QMutex::Recursive)
+    {}
 
-  bool initializeWriter(const std::string& directory, int width, int height);
-  bool isRecording();
-  void stop();
+    bool initializeWriter(const std::string& directory, int width, int height);
+    bool isRecording();
+    void stop();
 
-public Q_SLOTS:
-  void processFrame(QImage frame);
+  public Q_SLOTS:
+    void processFrame(QImage frame);
 
-private:
-  int height_;
-  int width_;
-  QMutex video_mutex_;
-  std::shared_ptr<cv::VideoWriter> video_writer_;
-};
-}  // namespace mapviz
+  private:
+    int height_;
+    int width_;
+    QMutex video_mutex_;
+    boost::shared_ptr<cv::VideoWriter> video_writer_;
+  };
+}
 
-#endif  // MAPVIZ__VIDEO_WRITER_H_
+#endif //MAPVIZ_VIDEO_WRITER_H

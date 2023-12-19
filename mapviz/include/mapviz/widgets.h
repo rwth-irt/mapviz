@@ -27,8 +27,8 @@
 //
 // *****************************************************************************
 
-#ifndef MAPVIZ__WIDGETS_H_
-#define MAPVIZ__WIDGETS_H_
+#ifndef MAPVIZ_WIDGETS_H_
+#define MAPVIZ_WIDGETS_H_
 
 // QT libraries
 #include <QWidget>
@@ -42,130 +42,134 @@
 
 namespace mapviz
 {
-class PluginConfigList : public QListWidget
-{
-  Q_OBJECT
-
-public:
-  explicit PluginConfigList(QWidget *parent = nullptr) : QListWidget(parent) {}
-  PluginConfigList() = default;
-
-  void UpdateIndices()
+  class PluginConfigList : public QListWidget
   {
-    for (int i = 0; i < count(); i++) {
-      item(i)->setData(Qt::UserRole, QVariant((static_cast<float>(i))));
+    Q_OBJECT
+
+  public:
+    explicit PluginConfigList(QWidget *parent = 0) : QListWidget(parent) {}
+    PluginConfigList();
+    
+    void UpdateIndices()
+    {
+      for (size_t i = 0; i < count(); i++)
+      {
+        item(i)->setData(Qt::UserRole, QVariant((float)i));
+      }
     }
-  }
 
-Q_SIGNALS:
-  void ItemsMoved();
+  Q_SIGNALS:
+    void ItemsMoved();
 
-protected:
-  void dropEvent(QDropEvent* event) override
-  {
-    QListWidget::dropEvent(event);
+  protected:
+    virtual void dropEvent(QDropEvent* event)
+    {
+      QListWidget::dropEvent(event);
 
-    UpdateIndices();
+      UpdateIndices();
 
-    Q_EMIT ItemsMoved();
-  }
-};
-
-class PluginConfigListItem : public QListWidgetItem
-{
-public:
-  explicit PluginConfigListItem(QListWidget *parent = nullptr) : QListWidgetItem(parent) {}
-
-  bool operator< (const QListWidgetItem & other) const override
-  {
-    return data(Qt::UserRole).toFloat() < other.data(Qt::UserRole).toFloat();
-  }
-};
-
-class SingleClickLabel : public QLabel
-{
-  Q_OBJECT
-
-public:
-  explicit SingleClickLabel(QWidget *parent = 0, Qt::WindowFlags flags = 0) :
-    QLabel(parent, flags) {}
-
-  ~SingleClickLabel() override = default;
-
-Q_SIGNALS:
-  void Clicked();
-
-protected:
-  void mousePressEvent(QMouseEvent*) override
-  {
-    Q_EMIT Clicked();
-  }
-};
-
-class DoubleClickWidget : public QWidget
-{
-  Q_OBJECT
-
-public:
-  explicit DoubleClickWidget(QWidget *parent = 0, Qt::WindowFlags flags = 0) :
-    QWidget(parent, flags) {}
-
-  ~DoubleClickWidget() override = default;
-
-Q_SIGNALS:
-  void DoubleClicked();
-  void RightClicked();
-
-protected:
-  void mouseDoubleClickEvent(QMouseEvent* event) override
-  {
-    if (event->button() == Qt::LeftButton) {
-      Q_EMIT DoubleClicked();
+      Q_EMIT ItemsMoved();
     }
-  }
-
-  void mouseReleaseEvent(QMouseEvent* event) override
+  };
+  
+  class PluginConfigListItem : public QListWidgetItem
   {
-    if (event->button() == Qt::RightButton) {
-      Q_EMIT RightClicked();
+   
+  public:
+    explicit PluginConfigListItem(QListWidget *parent = 0) : QListWidgetItem(parent) {}
+    
+    virtual bool operator< (const QListWidgetItem & other) const 
+    {
+      return data(Qt::UserRole).toFloat() < other.data(Qt::UserRole).toFloat();
     }
-  }
-};
+  };
 
-class IconWidget : public QWidget
-{
-  Q_OBJECT
-
-public:
-  explicit IconWidget(QWidget *parent = nullptr, Qt::WindowFlags flags = nullptr) :
-    QWidget(parent, flags)
+  class SingleClickLabel : public QLabel
   {
-    pixmap_ = QPixmap(16, 16);
-    pixmap_.fill(Qt::transparent);
-  }
+    Q_OBJECT
 
-  ~IconWidget() override = default;
+  public:
+    explicit SingleClickLabel(QWidget *parent = 0, Qt::WindowFlags flags = 0) :
+      QLabel(parent, flags) {}
 
-  void SetPixmap(QPixmap pixmap)
+    ~SingleClickLabel() {}
+
+  Q_SIGNALS:
+    void Clicked();
+
+  protected:
+    virtual void mousePressEvent(QMouseEvent* event)
+    {
+      Q_EMIT Clicked();
+    }
+  };
+
+  class DoubleClickWidget : public QWidget
   {
-    pixmap_ = pixmap;
-    update();
-  }
+    Q_OBJECT
 
-protected:
-  void paintEvent(QPaintEvent*) override
+  public:
+    explicit DoubleClickWidget(QWidget *parent = 0, Qt::WindowFlags flags = 0) :
+      QWidget(parent, flags) {}
+
+    ~DoubleClickWidget() {}
+
+  Q_SIGNALS:
+    void DoubleClicked();
+    void RightClicked();
+
+  protected:
+    virtual void mouseDoubleClickEvent(QMouseEvent* event)
+    {
+      if (event->button() == Qt::LeftButton)
+      {
+        Q_EMIT DoubleClicked();
+      }
+    }
+    
+    virtual void mouseReleaseEvent(QMouseEvent* event)
+    {
+      if (event->button() == Qt::RightButton)
+      {
+        Q_EMIT RightClicked();
+      }
+    }
+  };
+  
+  class IconWidget : public QWidget
   {
-    QPainter painter(this);
-    painter.fillRect(0, 0, width(), height(), palette().color(QPalette::Button));
+    Q_OBJECT
 
-    int x_offset = (width() - pixmap_.width()) / 2;
-    int y_offset = (height() - pixmap_.height()) / 2;
+  public:
+    explicit IconWidget(QWidget *parent = 0, Qt::WindowFlags flags = 0) :
+      QWidget(parent, flags)
+    {
+      pixmap_ = QPixmap(16, 16);
+      pixmap_.fill(Qt::transparent);
+    }
 
-    painter.drawPixmap(x_offset, y_offset, pixmap_);
-  }
+    ~IconWidget() {}
+    
+    void SetPixmap(QPixmap pixmap)
+    {
+      pixmap_ = pixmap;
+      update();
+    }
 
-  QPixmap pixmap_;
-};
-}   // namespace mapviz
+  protected:
+    virtual void paintEvent(QPaintEvent* e)
+    {
+      QPainter painter(this);
+      painter.fillRect(0, 0, width(), height(), palette().color(QPalette::Button));
+      
+      int x_offset = (width() - pixmap_.width()) / 2.0;
+      int y_offset = (height() - pixmap_.height()) / 2.0;
+      
+      painter.drawPixmap(x_offset, y_offset, pixmap_);
+    }
+    
+    QPixmap pixmap_;
+  };
+}
 
-#endif  // MAPVIZ__WIDGETS_H_
+#endif  // MAPVIZ_WIDGETS_H_

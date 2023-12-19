@@ -37,7 +37,7 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 
-#include <rclcpp/logging.hpp>
+#include <ros/ros.h>
 
 #include <swri_math_util/constants.h>
 #include <swri_math_util/trig_util.h>
@@ -47,14 +47,13 @@
 
 namespace tile_map
 {
-  TileMapView::TileMapView(rclcpp::Logger logger) :
+  TileMapView::TileMapView() :
     level_(-1),
     width_(100),
-    height_(100),
-    logger_(logger)
+    height_(100)
   {
-    ImageCachePtr image_cache = std::make_shared<ImageCache>("/tmp/tile_map", 4096, logger);
-    tile_cache_ = std::make_shared<TextureCache>(image_cache, 512, logger);
+    ImageCachePtr image_cache = boost::make_shared<ImageCache>("/tmp/tile_map");
+    tile_cache_ = boost::make_shared<TextureCache>(image_cache);
   }
 
   bool TileMapView::IsReady()
@@ -67,13 +66,7 @@ namespace tile_map
     tile_cache_->Clear();
   }
 
-  void TileMapView::SetLogger(rclcpp::Logger logger)
-  {
-    logger_ = logger;
-    tile_cache_->SetLogger(logger_);
-  }
-
-  void TileMapView::SetTileSource(const std::shared_ptr<TileSource>& tile_source)
+  void TileMapView::SetTileSource(const boost::shared_ptr<TileSource>& tile_source)
   {
     tile_source_ = tile_source;
     level_ = -1;
@@ -89,19 +82,19 @@ namespace tile_map
 
     transform_ = transform;
 
-    for (auto & tile : tiles_)
+    for (size_t i = 0; i < tiles_.size(); i++)
     {
-      for (size_t j = 0; j < tile.points_t.size(); j++)
+      for (size_t j = 0; j < tiles_[i].points_t.size(); j++)
       {
-        tile.points_t[j] = transform_ * tile.points[j];
+        tiles_[i].points_t[j] = transform_ * tiles_[i].points[j];
       }
     }
 
-    for (auto & i : precache_)
+    for (size_t i = 0; i < precache_.size(); i++)
     {
-      for (size_t j = 0; j < i.points_t.size(); j++)
+      for (size_t j = 0; j < precache_[i].points_t.size(); j++)
       {
-        i.points_t[j] = transform_ * i.points[j];
+        precache_[i].points_t[j] = transform_ * precache_[i].points[j];
       }
     }
   }
@@ -150,7 +143,7 @@ namespace tile_map
 
     if (size > 50)
     {
-      RCLCPP_ERROR(logger_, "Invalid map size: %ld", size);
+      ROS_ERROR("Invalid map size: %ld", size);
       return;
     }
 
@@ -167,9 +160,9 @@ namespace tile_map
       int64_t right = std::min(max_size, left + size_);
       int64_t bottom = std::min(max_size, top + size_);
 
-      for (auto & tile : tiles_)
+      for (size_t i = 0; i < tiles_.size(); i++)
       {
-        tile_cache_->AddTexture(tile.texture);
+        tile_cache_->AddTexture(tiles_[i].texture);
       }
       tiles_.clear();
 
@@ -183,9 +176,9 @@ namespace tile_map
         }
       }
 
-      for (auto & i : precache_)
+      for (size_t i = 0; i < precache_.size(); i++)
       {
-        tile_cache_->AddTexture(i.texture);
+        tile_cache_->AddTexture(precache_[i].texture);
       }
       precache_.clear();
 
@@ -217,14 +210,14 @@ namespace tile_map
 
   void TileMapView::DrawTiles(std::vector<Tile>& tiles, int priority)
   {
-    for (auto & tile : tiles)
+    for (size_t i = 0; i < tiles.size(); i++)
     {
-      TexturePtr& texture = tile.texture;
+      TexturePtr& texture = tiles[i].texture;
 
       if (!texture)
       {
         bool failed;
-        texture = tile_cache_->GetTexture(tile.url_hash, tile.url, failed, priority);
+        texture = tile_cache_->GetTexture(tiles[i].url_hash, tiles[i].url, failed, priority);
       }
 
       if (texture)
@@ -235,19 +228,19 @@ namespace tile_map
 
         glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-        for (int32_t row = 0; row < tile.subdiv_count; row++)
+        for (int32_t row = 0; row < tiles[i].subdiv_count; row++)
         {
-          for (int32_t col = 0; col < tile.subdiv_count; col++)
+          for (int32_t col = 0; col < tiles[i].subdiv_count; col++)
           {
-            double u_0 = col * tile.subwidth;
-            double v_0 = 1.0 - row * tile.subwidth;
-            double u_1 = (col + 1.0) * tile.subwidth;
-            double v_1 = 1.0 - (row + 1.0) * tile.subwidth;
+            double u_0 = col * tiles[i].subwidth;
+            double v_0 = 1.0 - row * tiles[i].subwidth;
+            double u_1 = (col + 1.0) * tiles[i].subwidth;
+            double v_1 = 1.0 - (row + 1.0) * tiles[i].subwidth;
 
-            const tf2::Vector3& tl = tile.points_t[row * (tile.subdiv_count + 1) + col];
-            const tf2::Vector3& tr = tile.points_t[row * (tile.subdiv_count + 1) + col + 1];
-            const tf2::Vector3& br = tile.points_t[(row + 1) * (tile.subdiv_count + 1) + col + 1];
-            const tf2::Vector3& bl = tile.points_t[(row + 1) * (tile.subdiv_count + 1) + col];
+            const tf::Vector3& tl = tiles[i].points_t[row * (tiles[i].subdiv_count + 1) + col];
+            const tf::Vector3& tr = tiles[i].points_t[row * (tiles[i].subdiv_count + 1) + col + 1];
+            const tf::Vector3& br = tiles[i].points_t[(row + 1) * (tiles[i].subdiv_count + 1) + col + 1];
+            const tf::Vector3& bl = tiles[i].points_t[(row + 1) * (tiles[i].subdiv_count + 1) + col];
 
             // Triangle 1
             glTexCoord2f(u_0, v_0); glVertex2d(tl.x(), tl.y());
@@ -312,14 +305,14 @@ namespace tile_map
       {
         double t_lat, t_lon;
         ToLatLon(level, x + col * tile.subwidth, y + row * tile.subwidth, t_lat, t_lon);
-        tile.points.emplace_back(tf2::Vector3(t_lon, t_lat, 0));
+        tile.points.push_back(tf::Vector3(t_lon, t_lat, 0));
       }
     }
 
     tile.points_t = tile.points;
-    for (auto & i : tile.points_t)
+    for (size_t i = 0; i < tile.points_t.size(); i++)
     {
-      i = transform_ * i;
+      tile.points_t[i] = transform_ * tile.points_t[i];
     }
   }
 }

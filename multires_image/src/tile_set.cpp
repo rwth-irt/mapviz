@@ -67,12 +67,12 @@ namespace multires_image
   {
   }
 
-  TileSet::~TileSet()
+  TileSet::~TileSet(void)
   {
     // Free each of the layers.
-    for (auto & m_layer : m_layers)
+    for (unsigned int i = 0; i < m_layers.size(); i++)
     {
-      delete m_layer;
+      delete m_layers[i];
     }
   }
 

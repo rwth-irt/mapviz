@@ -27,8 +27,12 @@
 //
 // *****************************************************************************
 
-#ifndef MAPVIZ__CONFIG_ITEM_H_
-#define MAPVIZ__CONFIG_ITEM_H_
+#ifndef MAPVIZ_CONFIG_ITEM_H_
+#define MAPVIZ_CONFIG_ITEM_H_
+
+// C++ standard libraries
+#include <string>
+#include <vector>
 
 // QT libraries
 #include <QWidget>
@@ -36,55 +40,51 @@
 #include <QMouseEvent>
 #include <QListWidgetItem>
 
-// C++ standard libraries
-#include <string>
-#include <vector>
-
 // Auto-generated UI files
 #include "ui_configitem.h"
 
 namespace mapviz
 {
-class ConfigItem : public QWidget
-{
-  Q_OBJECT
+  class ConfigItem : public QWidget
+  {
+    Q_OBJECT
 
-public:
-  explicit ConfigItem(QWidget *parent = nullptr, Qt::WindowFlags flags = nullptr);
-  ~ConfigItem() override = default;
+  public:
+    explicit ConfigItem(QWidget *parent = 0, Qt::WindowFlags flags = 0);
+    ~ConfigItem();
 
-  void SetName(QString name);
-  void SetType(QString type);
-  void SetWidget(QWidget* widget);
+    void SetName(QString name);
+    void SetType(QString type);
+    void SetWidget(QWidget* widget);
+    
+    void SetListItem(QListWidgetItem* item) { item_ = item; }
+    bool Collapsed() const { return ui_.content->isHidden(); }
+    QString Name() const { return name_; }
 
-  void SetListItem(QListWidgetItem* item) { item_ = item; }
-  bool Collapsed() const { return ui_.content->isHidden(); }
-  QString Name() const { return name_; }
+    Ui::configitem ui_;
 
-  Ui::configitem ui_;
+  Q_SIGNALS:
+    void UpdateSizeHint();
+    void ToggledDraw(QListWidgetItem* plugin, bool visible);
+    void RemoveRequest(QListWidgetItem* plugin);
 
-Q_SIGNALS:
-  void UpdateSizeHint();
-  void ToggledDraw(QListWidgetItem* plugin, bool visible);
-  void RemoveRequest(QListWidgetItem* plugin);
+  public Q_SLOTS:
+    void Hide();
+    void EditName();
+    void Remove();
+    void ToggleDraw(bool toggled);
 
-public Q_SLOTS:
-  void Hide();
-  void EditName();
-  void Remove();
-  void ToggleDraw(bool toggled);
+  private:
+    virtual void contextMenuEvent(QContextMenuEvent *event) override;
 
-private:
-  void contextMenuEvent(QContextMenuEvent *event) override;
+  protected:
+    QListWidgetItem* item_;
+    QString name_;
+    QString type_;
+    QAction* edit_name_action_;
+    QAction* remove_item_action_;
+    bool visible_;
+  };
+}
 
-protected:
-  QListWidgetItem* item_;
-  QString name_;
-  QString type_;
-  QAction* edit_name_action_;
-  QAction* remove_item_action_;
-  bool visible_;
-};
-}   // namespace mapviz
-
-#endif  // MAPVIZ__CONFIG_ITEM_H_
+#endif  // MAPVIZ_CONFIG_ITEM_H_

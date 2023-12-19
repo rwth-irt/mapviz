@@ -26,23 +26,25 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 // *****************************************************************************
-#ifndef MAPVIZ__SELECT_FRAME_DIALOG_H_
-#define MAPVIZ__SELECT_FRAME_DIALOG_H_
+#ifndef MAPVIZ_SELECT_FRAME_DIALOG_H_
+#define MAPVIZ_SELECT_FRAME_DIALOG_H_
 
-#include <tf2_ros/buffer.h>
-
-#include <QDialog>
-
-#include <memory>
 #include <string>
 #include <vector>
 
+#include <boost/shared_ptr.hpp>
+
+#include <QDialog>
 
 QT_BEGIN_NAMESPACE
 class QLineEdit;
 class QListWidget;
 class QPushButton;
 QT_END_NAMESPACE
+
+namespace tf {
+class TransformListener;
+}  // namespace tf
 
 namespace mapviz
 {
@@ -63,8 +65,8 @@ class SelectFrameDialog : public QDialog
    * selection, the returned string be empty.
    */
   static std::string selectFrame(
-      std::shared_ptr<tf2_ros::Buffer> tf_buffer,
-      QWidget *parent = nullptr);
+    boost::shared_ptr<tf::TransformListener> tf_listener,
+    QWidget *parent=0);
 
   /**
    * Present the user with a dialog to select a multiple TF frames.
@@ -73,15 +75,15 @@ class SelectFrameDialog : public QDialog
    * selection, the returned vector will be empty.
    */
   static std::vector<std::string> selectFrames(
-      std::shared_ptr<tf2_ros::Buffer> tf_buffer,
-    QWidget *parent = nullptr);
+    boost::shared_ptr<tf::TransformListener> tf_listener,
+    QWidget *parent=0);
 
   /**
    * Constructor for the SelectFrameDialog.
    */
-  explicit SelectFrameDialog(std::shared_ptr<tf2_ros::Buffer> tf_buffer,
-                             QWidget *parent = nullptr);
-
+  SelectFrameDialog(boost::shared_ptr<tf::TransformListener> tf_listener,
+                    QWidget *parent=0);
+  
   /**
    * Choose whether the user can select one (allow=false) or multiple
    * (allow=true) frames.  The default is false.
@@ -102,8 +104,8 @@ class SelectFrameDialog : public QDialog
   std::vector<std::string> selectedFrames() const;
 
  private:
-  void timerEvent(QTimerEvent *) override;
-  void closeEvent(QCloseEvent *) override;
+  void timerEvent(QTimerEvent *);
+  void closeEvent(QCloseEvent *);
 
   std::vector<std::string> filterFrames(
     const std::vector<std::string> &) const;
@@ -113,7 +115,7 @@ class SelectFrameDialog : public QDialog
   void updateDisplayedFrames();
 
  private:
-  std::shared_ptr<tf2_ros::Buffer> tf_buf_;
+  boost::shared_ptr<tf::TransformListener> tf_;
   std::vector<std::string> known_frames_;
   std::vector<std::string> displayed_frames_;
   int fetch_frames_timer_id_;
@@ -124,4 +126,4 @@ class SelectFrameDialog : public QDialog
   QLineEdit *name_filter_;
 };  // class SelectFrameDialog
 }  // namespace mapviz
-#endif  // MAPVIZ__SELECT_FRAME_DIALOG_H_
+#endif  // MAPVIZ_SELECT_FRAME_DIALOG_H_

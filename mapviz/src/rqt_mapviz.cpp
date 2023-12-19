@@ -27,14 +27,14 @@
 //
 // *****************************************************************************
 
-#include "mapviz/rqt_mapviz.h"
-#include <pluginlib/class_list_macros.hpp>
+#include "include/mapviz/rqt_mapviz.h"
+#include <pluginlib/class_list_macros.h>
 
 namespace mapviz
 {
 
   RqtMapviz::RqtMapviz() :
-    widget_(nullptr)
+    widget_(NULL)
   {
     setObjectName("RqtMapviz");
   }
@@ -43,7 +43,7 @@ namespace mapviz
   {
     // The plugin class doesn't really do very much -- just start Mapviz
     // and add it to the context.
-    widget_ = new Mapviz(false, 0, nullptr);
+    widget_ = new Mapviz(false, 0, NULL);
     widget_->setWindowFlags(Qt::Widget);
     context.addWidget(widget_);
   }
@@ -61,6 +61,6 @@ namespace mapviz
                                   const qt_gui_cpp::Settings& instance_settings)
   {
   }
-}   // namespace mapviz
+}
 
 PLUGINLIB_EXPORT_CLASS(mapviz::RqtMapviz, rqt_gui_cpp::Plugin)

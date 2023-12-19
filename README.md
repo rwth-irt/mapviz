@@ -1,7 +1,3 @@
-# Mapviz using Google / OSM / OpenSeaMap (markers) tiles
-## adapted from [Mapviz](https://github.com/swri-robotics/mapviz)
-
----
 Mapviz [![Build Status](https://travis-ci.org/swri-robotics/mapviz.svg?branch=master)](https://travis-ci.org/swri-robotics/mapviz)
 ======
 

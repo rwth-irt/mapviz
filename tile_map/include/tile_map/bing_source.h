@@ -72,7 +72,7 @@ namespace tile_map
      * @param y The Y coordinate
      * @return A hash that uniquely identifies this tile
      */
-    size_t GenerateTileHash(int32_t level, int64_t x, int64_t y) override;
+    virtual size_t GenerateTileHash(int32_t level, int64_t x, int64_t y);
 
     /**
      * Generates a URL that will retrieve a tile for the given coordinates.
@@ -86,9 +86,9 @@ namespace tile_map
      * @param y The Y coordinate
      * @return A URL that points to this tile
      */
-    QString GenerateTileUrl(int32_t level, int64_t x, int64_t y) override;
+    virtual QString GenerateTileUrl(int32_t level, int64_t x, int64_t y);
 
-    QString GetType() const override;
+    virtual QString GetType() const;
 
     QString GetApiKey() const;
 

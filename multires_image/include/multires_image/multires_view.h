@@ -42,7 +42,7 @@ class MultiresView
 {
   public:
     MultiresView(multires_image::TileSet* tiles, QGLWidget* widget);
-    ~MultiresView() = default;
+    ~MultiresView(void);
 
     const multires_image::TileCache* Cache() { return &m_cache; }
 
