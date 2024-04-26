@@ -1,0 +1,41 @@
+<package format="3">
+  <name>multires_image</name>
+  <version>2.3.0</version>
+  <description>
+
+     multires_image
+
+  </description>
+  <author>Marc Alban</author>
+  <author>P. J. Reed</author>
+  <maintainer email="swri-robotics@swri.org">Southwest Research Institute</maintainer>
+  <license>BSD</license>
+  <url>https://github.com/swri-robotics/mapviz</url>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>qt5-qmake</buildtool_depend>
+
+  <depend>libqt5-core</depend>
+  <build_depend>libqt5-opengl-dev</build_depend>
+
+  <depend>cv_bridge</depend>
+  <depend>geometry_msgs</depend>
+  <depend>gps_msgs</depend>
+  <depend>mapviz</depend>
+  <depend>pluginlib</depend>
+  <depend>rclcpp</depend>
+  <depend>swri_math_util</depend>
+  <depend>swri_transform_util</depend>
+  <depend>tf2</depend>
+
+  <exec_depend>libqt5-opengl</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <mapviz plugin="${prefix}/mapviz_plugins.xml" />
+  </export>
+
+</package>
+
+
